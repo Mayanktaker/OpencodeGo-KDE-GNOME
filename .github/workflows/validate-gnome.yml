@@ -33,6 +33,15 @@ jobs:
       - name: Run the gjs suites
         run: bash gnome-extension/tests/run-tests.sh
 
+      - name: Lint deprecated St.BoxLayout properties
+        run: |
+          # GNOME 48+ removed St.BoxLayout.vertical — use _orient() helper instead
+          # Exclude the _orient() helper's own fallback branch (contains 'isVertical')
+          if grep -rn 'vertical:' gnome-extension/*.js --include='*.js' | grep -v '_orient' | grep -v 'isVertical'; then
+            echo "::error::Raw 'vertical:' found on St.BoxLayout — use the _orient() compat helper (GNOME 48+ removed this property)"
+            exit 1
+          fi
+
       - name: Validate packaging script
         run: bash gnome-extension/package.sh
 

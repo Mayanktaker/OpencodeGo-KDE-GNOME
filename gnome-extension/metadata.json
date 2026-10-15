@@ -3,7 +3,7 @@
     "uuid": "opencodego-usage@mayanktaker.com",
     "name": "OpenCode Go Usage Tracker",
     "description": "Tracks OpenCode Go subscription usage (Rolling, Weekly, Monthly) from the panel. Hover the icon to see all three windows.",
-    "shell-version": ["46", "47", "48", "49", "50"],
+    "shell-version": ["46", "47", "48", "49", "50", "51"],
     "settings-schema": "org.gnome.shell.extensions.opencodego-usage",
     "url": "https://github.com/Mayanktaker/OpencodeGo-KDE-GNOME"
 }

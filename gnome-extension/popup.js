@@ -8,6 +8,14 @@ import Gio from 'gi://Gio';
 import * as Api from './api.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+// Backward-compatible orientation props — GNOME 48+ removed St.BoxLayout.vertical
+const _useOrientation = 'orientation' in St.BoxLayout.prototype;
+function _orient(isVertical) {
+    return _useOrientation
+        ? { orientation: isVertical ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL }
+        : { vertical: isVertical };
+}
+
 // Quota warning thresholds matching the KDE plasmoid and panel indicator
 const WARN_THRESHOLD_PERCENT = 75;
 const CRITICAL_THRESHOLD_PERCENT = 90;
@@ -102,14 +110,14 @@ function resetLabel(seconds) {
 // Builds one usage window row: icon, label, limit figures, percent, rounded progress bar, and reset countdown
 function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode = false) {
     const itemBox = new St.BoxLayout({
-        vertical: true,
+        ..._orient(true),
         style_class: compactMode ? 'opencodego-usage-item opencodego-compact-row' : 'opencodego-usage-item',
         x_expand: true,
     });
 
     // Title line holding window label, limit numbers, and percentage
     const titleRow = new St.BoxLayout({
-        vertical: false,
+        ..._orient(false),
         style_class: 'opencodego-window-title-row',
         x_expand: true,
         y_align: Clutter.ActorAlign.CENTER,
@@ -236,7 +244,7 @@ export function buildMenuContent(menu, state, actions, compactMode = false) {
 
     // Card header with brand icon, title, subtitle, and headline usage badge
     const header = new St.BoxLayout({
-        vertical: false,
+        ..._orient(false),
         style_class: 'opencodego-header-box',
         x_expand: true,
         y_align: Clutter.ActorAlign.CENTER,
@@ -244,7 +252,7 @@ export function buildMenuContent(menu, state, actions, compactMode = false) {
     header.add_child(createHeaderIcon());
 
     const titleCol = new St.BoxLayout({
-        vertical: true,
+        ..._orient(true),
         x_expand: true,
         y_align: Clutter.ActorAlign.CENTER,
     });
