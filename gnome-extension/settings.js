@@ -17,6 +17,7 @@ const KEY_NOTIFICATIONS = 'enable-notifications';
 const KEY_THRESHOLD = 'notification-threshold';
 const KEY_COMPACT_MODE = 'compact-mode';
 const KEY_TOGGLE_SHORTCUT = 'toggle-shortcut';
+const KEY_HOVER_OPEN = 'hover-to-open';
 
 // Seconds per minute used to convert the refresh setting
 const SECONDS_PER_MINUTE = 60;
@@ -63,6 +64,8 @@ export function getNotificationThreshold(settings) { return settings.get_uint(KE
 export function getCompactMode(settings) { return settings.get_boolean(KEY_COMPACT_MODE); }
 // Keyboard shortcut array to toggle popup menu
 export function getToggleShortcut(settings) { return settings.get_strv(KEY_TOGGLE_SHORTCUT); }
+// Whether hovering over the panel indicator opens the popup
+export function getHoverToOpen(settings) { return settings.get_boolean(KEY_HOVER_OPEN); }
 
 // Subscribes to key changes; cb receives the changed key name
 export function connectChanged(settings, names, cb) {
@@ -80,6 +83,7 @@ export const WATCHED_KEYS = [
     KEY_NOTIFICATIONS,
     KEY_THRESHOLD,
     KEY_COMPACT_MODE,
-    KEY_TOGGLE_SHORTCUT
+    KEY_TOGGLE_SHORTCUT,
+    KEY_HOVER_OPEN
 ];
-export { KEY_WORKSPACE, KEY_COOKIE, KEY_REFRESH, KEY_PANEL_BADGE, KEY_TRAY_MODE, KEY_NOTIFICATIONS, KEY_THRESHOLD, KEY_COMPACT_MODE, KEY_TOGGLE_SHORTCUT };
+export { KEY_WORKSPACE, KEY_COOKIE, KEY_REFRESH, KEY_PANEL_BADGE, KEY_TRAY_MODE, KEY_NOTIFICATIONS, KEY_THRESHOLD, KEY_COMPACT_MODE, KEY_TOGGLE_SHORTCUT, KEY_HOVER_OPEN };

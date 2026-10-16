@@ -4,9 +4,18 @@
 ## v2.8.1
 
 **What's new**
+- Redesigned the GNOME usage popup card to match the compact card layout: a header with a live status pill (`LIVE`, `DEMO MODE`, `STALE`, `AUTH ERROR`), timestamp/weekly summary subtitle, and three circular header buttons for **Refresh** (`↻`), **Open Console** (`↗`), and **Settings** (`⚙`) — removing the tall bottom menu rows.
+- Added smooth 250ms animated horizontal gradient fills and an alert threshold marker on all three progress bars, with `$used / $limit ($left)` and compact `↻ 3h 33m` reset badges balanced underneath each bar.
+- Added a bottom footer bar showing your active keyboard shortcut and a one-click **Copy Summary** (`📋 Copy Summary`) button that copies your Rolling, Weekly, and Monthly usage figures to the clipboard.
+- Upgraded the GNOME top-bar "All Three Limits" badge to clean tabular labels (`5h · W · M`), added middle-click to refresh immediately, scroll-wheel over the panel icon to cycle displayed limits, and a configurable hover-to-open switch with a short delay so passing your mouse over the top bar never opens the menu by accident.
+- Organized GNOME Preferences into three clean tabs (**General**, **Panel & Appearance**, and **Privacy & About**), added a keyboard shortcut selector, and allowed pasting your full OpenCode Console link into the Workspace ID box (in both GNOME and KDE Settings) to extract the ID automatically.
 - The GNOME extension now uses the standard `opencodego-usage@mayanktaker.com` identity required by extensions.gnome.org, so store validation passes cleanly.
 
 **Bug fixes**
+- Fixed Pango markup ampersand warnings in the GNOME Preferences window so all section titles and subtitles display properly.
+- Fixed long error messages stretching the GNOME popup menu across the screen by wrapping status and error banners inside a fixed-width card with a direct "Open Credentials Settings" button.
+- Fixed an awkward left indentation on the reset countdown text and restored compact inline reset timers when Compact Popup View is enabled.
+- Made the "Test Connection" button in GNOME Preferences automatically retry temporary server hiccups before reporting an error.
 - Removed a redundant settings entry from the GNOME extension's description file that triggered a reviewer warning.
 - The installer now retires the old, pre-rename install folder automatically, so you never end up with two copies of the extension.
 - Updated the About version label to match this release.

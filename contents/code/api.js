@@ -140,9 +140,17 @@ function checkCookieError(authCookie) {
     return "";
 }
 
+// Extracts a wrk_ or org_ identifier from a pasted OpenCode Console URL or bare string
+function extractWorkspaceId(workspaceId) {
+    var raw = String(workspaceId || "").trim();
+    if (!raw) return "";
+    var match = raw.match(/\b((?:wrk|org)_[A-Za-z0-9_-]+)\b/);
+    return match ? match[1] : raw;
+}
+
 // Validates the workspace id against the console's own accepted formats (wrk_/org_)
 function checkWorkspaceIdError(workspaceId) {
-    var ws = String(workspaceId || "").trim();
+    var ws = extractWorkspaceId(workspaceId);
     if (!ws) return "";
     if (!/^(wrk_|org_)/.test(ws)) {
         return "Workspace ID must start with 'wrk_' (or 'org_'). Copy it from the console URL: opencode.ai/console/wrk_XXXXXXXX/go";
@@ -167,7 +175,7 @@ function maxAttemptsPerRoute() {
 
 // Builds the Go status URL for a candidate route index, clamping the index into range
 function buildStatusUrl(workspaceId, routeIndex) {
-    var ws = String(workspaceId || "").trim();
+    var ws = extractWorkspaceId(workspaceId);
     var idx = parseInt(routeIndex, 10);
     if (isNaN(idx) || idx < 0) idx = 0;
     if (idx > CONSOLE_STATUS_ROUTES.length - 1) idx = CONSOLE_STATUS_ROUTES.length - 1;
@@ -178,7 +186,7 @@ function buildStatusUrl(workspaceId, routeIndex) {
 // Builds the curl shell command used to fetch Go status JSON. Qt's QML XMLHttpRequest strips the
 // Cookie header, so we shell out to curl which honors it; the executable Plasma dataengine runs it.
 function buildCurlCommand(workspaceId, authCookie, routeIndex) {
-    var ws = String(workspaceId || "").trim();
+    var ws = extractWorkspaceId(workspaceId);
     var cookie = buildCookieHeader(authCookie);
     var url = buildStatusUrl(ws, routeIndex);
     // -sSL: silent + show errors + follow redirects (so a dead session surfaces as JSON 401)
@@ -275,6 +283,19 @@ function formatResetFull(sec) {
         parts.push(sec + (sec === 1 ? " second" : " seconds"));
     }
     return parts.join(" ");
+}
+
+// Formats a seconds countdown into a compact two-unit label (e.g. "3h 45m" or "4d 7h")
+function formatResetCompact(sec) {
+    sec = Math.max(0, Math.floor(Number(sec) || 0));
+    if (sec <= 0) return "";
+    var days = Math.floor(sec / 86400);
+    var hours = Math.floor((sec % 86400) / 3600);
+    var minutes = Math.floor((sec % 3600) / 60);
+    if (days > 0) return hours > 0 ? days + "d " + hours + "h" : days + "d";
+    if (hours > 0) return minutes > 0 ? hours + "h " + minutes + "m" : hours + "h";
+    if (minutes > 0) return minutes + "m";
+    return sec + "s";
 }
 
 // Coerces the API's micro-cents values (BigInt serialized as a string, e.g. "125000000") into a Number
@@ -408,7 +429,8 @@ function parseConsoleGoStatus(data) {
             usedMicroCents: fiveHourUsed,
             limitMicroCents: fiveHourLimit,
             usedFormatted: formatCurrency(fiveHourUsed),
-            limitFormatted: formatCurrency(fiveHourLimit)
+            limitFormatted: formatCurrency(fiveHourLimit),
+            remainingFormatted: formatCurrency(Math.max(0, fiveHourLimit - fiveHourUsed)) + " left"
         }] : [],
         weekly: week ? [{
             label: "Weekly",
@@ -417,7 +439,8 @@ function parseConsoleGoStatus(data) {
             usedMicroCents: weekUsed,
             limitMicroCents: weekLimit,
             usedFormatted: formatCurrency(weekUsed),
-            limitFormatted: formatCurrency(weekLimit)
+            limitFormatted: formatCurrency(weekLimit),
+            remainingFormatted: formatCurrency(Math.max(0, weekLimit - weekUsed)) + " left"
         }] : [],
         monthly: month ? [{
             label: "Monthly",
@@ -426,7 +449,8 @@ function parseConsoleGoStatus(data) {
             usedMicroCents: monthUsed,
             limitMicroCents: monthLimit,
             usedFormatted: formatCurrency(monthUsed),
-            limitFormatted: formatCurrency(monthLimit)
+            limitFormatted: formatCurrency(monthLimit),
+            remainingFormatted: formatCurrency(Math.max(0, monthLimit - monthUsed)) + " left"
         }] : [],
         lastRefreshed: new Date().toLocaleTimeString()
     };

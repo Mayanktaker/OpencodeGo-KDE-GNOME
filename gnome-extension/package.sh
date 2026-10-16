@@ -40,7 +40,18 @@ cp "${SCRIPT_DIR}/icons/"*.svg "${BUILD_DIR}/package/icons/"
 
 # Create zip from inside package folder (EGO requires files at root of zip)
 cd "${BUILD_DIR}/package"
-zip -qr "${BUILD_DIR}/${ZIP_NAME}" .
+if command -v zip >/dev/null 2>&1; then
+    zip -qr "${BUILD_DIR}/${ZIP_NAME}" .
+else
+    python3 -c '
+import os, sys, zipfile
+with zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED) as zf:
+    for root, _, files in os.walk("."):
+        for f in sorted(files):
+            p = os.path.join(root, f)
+            zf.write(p, os.path.relpath(p, "."))
+' "${BUILD_DIR}/${ZIP_NAME}"
+fi
 cp "${BUILD_DIR}/${ZIP_NAME}" "${BUILD_DIR}/${CANONICAL_ZIP}"
 
 echo "✅ Created package: ${BUILD_DIR}/${ZIP_NAME}"

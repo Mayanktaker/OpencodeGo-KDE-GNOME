@@ -68,12 +68,18 @@ Item {
             to: 999999999
         }
 
-        // Workspace ID input field
+        // Workspace ID input field with automatic URL extraction when pasting a full console link
         QQC2.TextField {
             id: workspaceIdField
             Kirigami.FormData.label: i18n("Workspace ID:")
-            placeholderText: i18n("e.g. wrk_01KE20AQRQ9QR7N15TWGJBE2V9")
+            placeholderText: i18n("e.g. wrk_01KE20AQRQ9QR7N15TWGJBE2V9 or Console URL")
             Layout.fillWidth: true
+            onTextEdited: {
+                var extracted = Api.extractWorkspaceId(text);
+                if (extracted && extracted !== text.trim() && /^(wrk_|org_)/.test(extracted)) {
+                    text = extracted;
+                }
+            }
         }
 
         // Auth session cookie input field

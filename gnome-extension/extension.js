@@ -34,6 +34,12 @@ const BADGE_CRITICAL_PERCENT = 90;
 const BADGE_WARN_COLOR = '#ffb86c';
 const BADGE_CRITICAL_COLOR = '#ff5555';
 
+// Hover intent delay (ms) so grazing the top bar does not accidentally pop open the menu
+const HOVER_OPEN_DELAY_MS = 160;
+
+// Cycle order when scrolling the mouse wheel over the panel indicator
+const TRAY_CYCLE_MODES = ['weekly', 'fiveHour', 'monthly', 'all'];
+
 // Builds the panel icon from the extension's own icons/ folder. GNOME Shell never
 // adds an extension's icon directory to the icon theme, and StIconTheme only
 // resolves freedesktop theme trees, so the SVG is loaded straight off disk.
@@ -57,13 +63,15 @@ function badgeColorFor(percent) {
     return null;
 }
 
-// Panel indicator button; hover opens the popup, click toggles it
+// Panel indicator button; hover opens the popup, click toggles it, middle-click refreshes
 const OpenCodeGoIndicator = GObject.registerClass(
 class OpenCodeGoIndicator extends PanelMenu.Button {
-    // Wires the icon, hover-to-open behavior, and the initial state
+    // Wires the icon, hover-to-open behavior, middle-click/scroll actions, and initial state
     _init(extensionPath, actions) {
         super._init(0.0, 'OpenCode Go Usage', false);
         this._actions = actions || {};
+        this._hoverToOpen = true;
+        this._hoverTimerId = null;
 
         this.y_align = Clutter.ActorAlign.CENTER;
         this.y_expand = true;
@@ -93,10 +101,57 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         this._state = { status: 'demo', data: null, error: null };
         this._lastAlertedPercent = 0;
 
-        // Hover opens the popup (GNOME tray tooltips do not exist, so the popup IS the tooltip)
+        // Hover opens the popup after a brief intent delay when enabled in settings
         this.connect('enter-event', () => {
-            if (!this.menu.isOpen) this.menu.open();
+            if (!this._hoverToOpen || this.menu.isOpen) return Clutter.EVENT_PROPAGATE;
+            if (this._hoverTimerId) GLib.source_remove(this._hoverTimerId);
+            this._hoverTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, HOVER_OPEN_DELAY_MS, () => {
+                this._hoverTimerId = null;
+                if (this._hoverToOpen && !this.menu.isOpen) this.menu.open();
+                return GLib.SOURCE_REMOVE;
+            });
             return Clutter.EVENT_PROPAGATE;
+        });
+
+        // Cancel pending hover-open if pointer leaves before the intent delay expires
+        this.connect('leave-event', () => {
+            if (this._hoverTimerId) {
+                GLib.source_remove(this._hoverTimerId);
+                this._hoverTimerId = null;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        // Middle-click forces an immediate usage refresh without opening the menu
+        this.connect('button-press-event', (_actor, event) => {
+            if (event.get_button() === 2) {
+                if (this.menu.isOpen) this.menu.close();
+                this.refresh();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        // Mouse wheel scroll cycles which quota metric is displayed in the panel badge
+        this.connect('scroll-event', (_actor, event) => {
+            const dir = event.get_scroll_direction();
+            if (dir === Clutter.ScrollDirection.UP && this._actions.onCycleTrayMode) {
+                this._actions.onCycleTrayMode(-1);
+                return Clutter.EVENT_STOP;
+            }
+            if (dir === Clutter.ScrollDirection.DOWN && this._actions.onCycleTrayMode) {
+                this._actions.onCycleTrayMode(1);
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        // Re-run the 250ms bar fill animation whenever the popup menu is opened
+        this.menu.connect('open-state-changed', (_menu, isOpen) => {
+            if (isOpen) {
+                const popupMod = this._popupModule || Popup;
+                popupMod.buildMenuContent(this.menu, this._state, this._actions, this._compactMode, this._notifyThreshold, this._shortcutAccel);
+            }
         });
 
         // Initial paint with demo data so the popup is never empty
@@ -128,7 +183,7 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         let headlineColor = null;
 
         if (mode === 'all') {
-            text = `⏱ ${hPct}%  📅 ${wPct}%  🗓 ${mPct}%`;
+            text = `5h ${hPct}% · W ${wPct}% · M ${mPct}%`;
             headlineColor = badgeColorFor(Math.max(hPct, wPct, mPct));
         } else if (mode === 'fiveHour') {
             text = `${hPct}%`;
@@ -151,14 +206,15 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
     _setState(state) {
         this._state = state;
         this._updateBadge();
-        Popup.buildMenuContent(this.menu, state, this._actions, this._compactMode);
+        const popupMod = this._popupModule || Popup;
+        popupMod.buildMenuContent(this.menu, state, this._actions, this._compactMode, this._notifyThreshold, this._shortcutAccel);
     }
 
     // Runs one curl request honoring the route-walk and retry rules from api.js
     refresh() {
         // Single in-flight guard: a hover-triggered open or a settings edit never stacks curl processes
         if (this._inFlight) return;
-        const ws = this._workspaceId;
+        const ws = Api.extractWorkspaceId(this._workspaceId);
         const cookie = this._authCookie;
 
         // No credentials -> demo mode, same as the KDE widget
@@ -298,8 +354,9 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         });
     }
 
-    // Stops timer, kills any in-flight curl, and leaves nothing behind for disable()
+    // Stops timers, kills any in-flight curl, and leaves nothing behind for disable()
     destroy() {
+        if (this._hoverTimerId) { GLib.source_remove(this._hoverTimerId); this._hoverTimerId = null; }
         if (this._timerId) { GLib.source_remove(this._timerId); this._timerId = null; }
         this.cancelRequest();
         super.destroy();
@@ -315,6 +372,7 @@ export default class OpenCodeGoExtension extends Extension {
             onRefresh: () => this._indicator.refresh(),
             onOpenConsole: () => this._openConsole(),
             onOpenSettings: () => this._openSettings(),
+            onCycleTrayMode: step => this._cycleTrayMode(step),
         });
         Main.panel.addToStatusArea(this.uuid, this._indicator, 0, 'right');
 
@@ -328,6 +386,8 @@ export default class OpenCodeGoExtension extends Extension {
             this._indicator._enableNotifications = Settings.getEnableNotifications(this._settings);
             this._indicator._notifyThreshold = Settings.getNotificationThreshold(this._settings);
             this._indicator._compactMode = Settings.getCompactMode(this._settings);
+            this._indicator._hoverToOpen = Settings.getHoverToOpen(this._settings);
+            this._indicator._shortcutAccel = (Settings.getToggleShortcut(this._settings) || [])[0] || '';
         };
         this._applySettings();
         this._unsub = Settings.connectChanged(this._settings, Settings.WATCHED_KEYS, () => {
@@ -358,6 +418,14 @@ export default class OpenCodeGoExtension extends Extension {
             console.warn(`Could not register toggle-shortcut: ${e.message}`);
         }
 
+        // Reload popup.js bypassing GJS's static ES module cache when cycling disable/enable
+        import(`./popup.js?v=${Date.now()}`).then(mod => {
+            if (this._indicator) {
+                this._indicator._popupModule = mod;
+                this._indicator._setState(this._indicator._state);
+            }
+        }).catch(() => {});
+
         this._indicator.refresh();
     }
 
@@ -375,6 +443,15 @@ export default class OpenCodeGoExtension extends Extension {
         this._settings = null;
     }
 
+    // Cycles the panel badge mode when the user scrolls over the top-bar indicator
+    _cycleTrayMode(step) {
+        if (!this._settings) return;
+        const current = Settings.getTrayDisplayMode(this._settings);
+        const idx = Math.max(0, TRAY_CYCLE_MODES.indexOf(current));
+        const nextIdx = (idx + step + TRAY_CYCLE_MODES.length) % TRAY_CYCLE_MODES.length;
+        this._settings.set_string(Settings.KEY_TRAY_MODE, TRAY_CYCLE_MODES[nextIdx]);
+    }
+
     // Opens extension preferences dialog with fallback if dbus is unavailable
     _openSettings() {
         try {
@@ -390,7 +467,7 @@ export default class OpenCodeGoExtension extends Extension {
     // Opens this workspace's Go page in the default browser; the plain console
     // when no workspace is configured yet, so the entry is never a dead link
     _openConsole() {
-        const ws = this._indicator?._workspaceId?.trim();
+        const ws = Api.extractWorkspaceId(this._indicator?._workspaceId);
         const url = ws ? `${CONSOLE_URL_BASE}/${ws}/go` : CONSOLE_URL_BASE;
         try {
             Gio.AppInfo.launch_default_for_uri(url, null);

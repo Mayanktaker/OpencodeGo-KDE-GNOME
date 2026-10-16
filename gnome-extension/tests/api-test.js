@@ -22,6 +22,9 @@ ok(Api.checkCookieError('st_abcdefghijklmnopqrstuvwxyz') === '', 'valid cookie p
 ok(Api.checkCookieError('short') !== '', 'short cookie rejected');
 ok(Api.checkCookieError('Fe26.2**abcdefghijklmnop').indexOf('__Host-console_session') !== -1, 'Fe26 cookie detected with helpful error');
 ok(Api.checkWorkspaceIdError('wrk_abc') === '', 'wrk id valid');
+ok(Api.checkWorkspaceIdError('https://opencode.ai/console/wrk_01J9XYZ/go') === '', 'full console URL valid via auto-extract');
+eq(Api.extractWorkspaceId('https://opencode.ai/console/wrk_01J9XYZ/go'), 'wrk_01J9XYZ', 'extracts wrk id from URL');
+eq(Api.extractWorkspaceId('https://opencode.ai/console/org_998877/settings'), 'org_998877', 'extracts org id from URL');
 ok(Api.checkWorkspaceIdError('xyz') !== '', 'bad workspace rejected');
 
 // --- status marker split uses LAST occurrence ---
@@ -50,6 +53,7 @@ let model = Api.parseCurlOutput(JSON.stringify(payload), '', 0);
 eq(model.error, null, 'console payload parses without error');
 eq(model.data.usagePercent, 25, 'weekly headline percent from micro-cents');
 eq(model.data.weekly[0].value, 25, 'weekly bar value');
+eq(model.data.weekly[0].remainingFormatted, '$7.50 left', 'weekly remaining formatted');
 eq(model.data.monthly[0].value, 25, 'monthly bar value');
 ok(model.data.resetSeconds.monthly > 0, 'monthly reset from access.endsAt');
 
@@ -78,6 +82,9 @@ ok(mock.isMock === true && mock.weekly.length > 0, 'mock data shaped for demo mo
 // --- reset formatting ---
 eq(Api.formatResetFull(0), '', 'zero reset renders empty');
 ok(Api.formatResetFull(13500).indexOf('hour') !== -1, 'hours shown in countdown');
+eq(Api.formatResetCompact(0), '', 'zero compact reset renders empty');
+eq(Api.formatResetCompact(13500), '3h 45m', 'compact hours and minutes');
+eq(Api.formatResetCompact(370800), '4d 7h', 'compact days and hours');
 
 // Summary and exit code for the runner
 if (failures > 0) {

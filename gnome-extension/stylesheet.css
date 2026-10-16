@@ -9,18 +9,24 @@
     y-align: center;
 }
 
-/* Percentage badge shown next to the panel icon */
+/* Percentage badge shown next to the panel icon with tabular numerals */
 .opencodego-panel-badge {
     font-weight: 700;
+    font-feature-settings: "tnum";
     margin: 0;
     padding: 0 1px;
     y-align: center;
 }
 
-/* Header container in popup */
+/* Header container card in popup */
 .opencodego-header-box {
-    padding: 6px 6px 6px 6px;
+    min-width: 312px;
+    padding: 8px 10px;
+    margin-bottom: 4px;
     spacing: 10px;
+    border-radius: 10px;
+    background-color: rgba(128, 128, 140, 0.09);
+    border: 1px solid rgba(128, 128, 140, 0.14);
 }
 
 /* Header brand icon */
@@ -28,92 +34,273 @@
     icon-size: 22px;
 }
 
+/* Title line holding product title and status chip */
+.opencodego-title-line {
+    spacing: 6px;
+}
+
 /* Header title text */
 .opencodego-header-title {
     font-weight: 700;
-    font-size: 1.05em;
+    font-size: 1.02em;
+}
+
+/* Small status pill chip next to the header title */
+.opencodego-status-chip {
+    font-size: 0.66em;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 99px;
+}
+
+/* Status chip color variants */
+.opencodego-chip-live {
+    color: #2dd4bf;
+    background-color: rgba(45, 212, 191, 0.16);
+}
+
+.opencodego-chip-demo,
+.opencodego-chip-warn {
+    color: #ffb86c;
+    background-color: rgba(255, 184, 108, 0.18);
+    border: 1px solid rgba(255, 184, 108, 0.32);
+}
+
+.opencodego-chip-error {
+    color: #ff5555;
+    background-color: rgba(255, 85, 85, 0.2);
 }
 
 /* Header subtitle text */
 .opencodego-header-subtitle {
-    font-size: 0.78em;
+    font-size: 0.76em;
     opacity: 0.65;
+    font-feature-settings: "tnum";
 }
 
-/* Header percentage pill badge */
-.opencodego-header-badge {
+/* Group holding the 3 circular header action buttons */
+.opencodego-icon-btn-group {
+    spacing: 4px;
+}
+
+/* Circular inline action icon button in header */
+.opencodego-icon-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 99px;
+    padding: 0;
+    background-color: rgba(128, 128, 140, 0.14);
+    border: 1px solid rgba(128, 128, 140, 0.22);
+    transition-duration: 150ms;
+}
+
+.opencodego-icon-btn:hover,
+.opencodego-icon-btn:focus {
+    background-color: rgba(34, 211, 238, 0.22);
+    border-color: #22d3ee;
+}
+
+.opencodego-icon-btn-glyph {
+    icon-size: 13px;
+}
+
+/* Demo mode onboarding banner */
+.opencodego-demo-banner {
+    min-width: 312px;
+    padding: 6px 10px;
+    margin: 2px 0 4px 0;
+    spacing: 8px;
+    border-radius: 8px;
+    background-color: rgba(255, 184, 108, 0.12);
+    border: 1px solid rgba(255, 184, 108, 0.3);
+}
+
+.opencodego-demo-banner-text {
+    font-size: 0.8em;
+    color: #ffb86c;
+}
+
+.opencodego-demo-cta-btn {
+    padding: 1px 4px;
+}
+
+.opencodego-demo-cta-label {
+    font-size: 0.8em;
     font-weight: 700;
-    font-size: 1.05em;
-    padding: 2px 8px;
+    color: #ffb86c;
+    text-decoration: underline;
+}
+
+/* Error state alert card */
+.opencodego-error-banner {
+    min-width: 312px;
+    max-width: 326px;
+    padding: 10px;
+    margin: 4px 0;
+    spacing: 6px;
+    border-radius: 9px;
+    background-color: rgba(255, 85, 85, 0.14);
+    border: 1px solid rgba(255, 85, 85, 0.45);
+}
+
+.opencodego-error-title {
+    font-size: 0.88em;
+    font-weight: 700;
+    color: #ff7b7b;
+}
+
+.opencodego-error-body {
+    font-size: 0.8em;
+    opacity: 0.9;
+}
+
+.opencodego-error-cta-btn {
+    padding: 4px 10px;
+    margin-top: 2px;
     border-radius: 6px;
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 85, 85, 0.24);
+    border: 1px solid rgba(255, 85, 85, 0.55);
 }
 
-/* Usage item container for each window */
+.opencodego-error-cta-btn:hover {
+    background-color: rgba(255, 85, 85, 0.38);
+}
+
+.opencodego-error-cta-label {
+    font-size: 0.78em;
+    font-weight: 700;
+}
+
+/* Usage item sub-card for each quota window */
 .opencodego-usage-item {
-    padding: 3px 6px 3px 6px;
-    margin: 2px 0 2px 0;
-    spacing: 2px;
+    min-width: 312px;
+    padding: 7px 10px;
+    margin: 3px 0;
+    spacing: 4px;
+    border-radius: 9px;
+    background-color: rgba(128, 128, 140, 0.06);
+    border: 1px solid rgba(128, 128, 140, 0.1);
 }
 
-/* Window title row holding icon, label and percentage */
+/* Window title row holding dot, label, and percentage */
 .opencodego-window-title-row {
     spacing: 6px;
 }
 
-/* Window row symbolic icon */
-.opencodego-row-icon {
-    icon-size: 14px;
-    opacity: 0.85;
+/* Colored accent dot next to window title */
+.opencodego-window-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 99px;
+    margin-right: 2px;
 }
 
 /* Window quota label */
 .opencodego-window-label {
-    font-size: 0.95em;
+    font-size: 0.94em;
     font-weight: 600;
 }
 
-/* Window limit numbers (e.g. $4.80 / $20.00) */
-.opencodego-window-limit {
-    font-size: 0.85em;
-    opacity: 0.7;
-    margin-right: 6px;
+/* Inline compact metadata shown next to percentage in compact mode */
+.opencodego-compact-meta {
+    font-size: 0.78em;
+    font-feature-settings: "tnum";
+    opacity: 0.65;
+    margin-right: 4px;
 }
 
 /* Window percentage label */
 .opencodego-window-percent {
     font-size: 0.95em;
     font-weight: 700;
+    font-feature-settings: "tnum";
 }
 
 /* Progress bar drawing canvas */
 .opencodego-progress-bar {
-    margin: 3px 0 3px 0;
+    margin: 1px 0;
 }
 
-/* Reset countdown label */
-.opencodego-reset-label {
-    font-size: 0.8em;
+/* Balanced bottom metadata row under progress bar */
+.opencodego-meta-row {
+    spacing: 8px;
+}
+
+/* "$used / $limit ($left)" on left of meta row */
+.opencodego-remaining-label {
+    font-size: 0.78em;
+    font-feature-settings: "tnum";
     opacity: 0.65;
-    margin-top: 1px;
-    margin-bottom: 3px;
-    padding-left: 20px;
 }
 
-/* Footer note */
+/* Compact reset countdown "↻ 3h 33m" aligned flush right on meta row */
+.opencodego-reset-label {
+    font-size: 0.78em;
+    font-feature-settings: "tnum";
+    opacity: 0.65;
+    margin: 0;
+    padding: 0;
+}
+
+/* Transient status callout box */
+.opencodego-footer-box {
+    min-width: 312px;
+    max-width: 326px;
+    padding: 6px 9px;
+    margin: 2px 0 4px 0;
+    spacing: 8px;
+    border-radius: 8px;
+}
+
+.opencodego-status-transient {
+    background-color: rgba(255, 184, 108, 0.14);
+    border: 1px solid rgba(255, 184, 108, 0.35);
+}
+
 .opencodego-footer-label {
-    font-size: 0.82em;
-    opacity: 0.7;
-    padding: 4px 6px;
+    font-size: 0.8em;
+    opacity: 0.88;
+}
+
+/* Bottom footer bar holding keyboard shortcut hint and Copy Summary button */
+.opencodego-footer-bar {
+    min-width: 312px;
+    padding: 4px 6px 2px 6px;
+    margin-top: 2px;
+    spacing: 8px;
+}
+
+.opencodego-footer-shortcut {
+    font-size: 0.76em;
+    opacity: 0.55;
+}
+
+.opencodego-copy-btn {
+    padding: 2px 8px;
+    border-radius: 6px;
+    background-color: rgba(128, 128, 140, 0.12);
+    border: 1px solid rgba(128, 128, 140, 0.18);
+    transition-duration: 150ms;
+}
+
+.opencodego-copy-btn:hover,
+.opencodego-copy-btn:focus {
+    background-color: rgba(34, 211, 238, 0.2);
+    border-color: #22d3ee;
+}
+
+.opencodego-copy-label {
+    font-size: 0.76em;
+    font-weight: 600;
 }
 
 /* Compact mode row styling */
 .opencodego-compact-row {
-    padding: 1px 4px 1px 4px;
-    margin: 1px 0 1px 0;
-    spacing: 1px;
+    padding: 4px 8px;
+    margin: 2px 0;
+    spacing: 2px;
 }
 
 .opencodego-compact-row .opencodego-progress-bar {
-    margin: 1px 0 1px 0;
+    margin: 1px 0;
 }

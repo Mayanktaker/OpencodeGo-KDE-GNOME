@@ -1,5 +1,5 @@
 // © Mayanktaker Computers & Web Development | https://mayanktaker.com
-// libadwaita preferences: console credentials, refresh interval, connection test
+// libadwaita preferences: multi-page General, Panel & Appearance, and Privacy & About
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
@@ -23,22 +23,47 @@ const RESULT_ERROR_COLOR = '#ff5555';
 // Decodes GLib's waitpid-encoded spawn status to the child exit code
 const exitCodeOf = status => (status & 0xff00) >> 8;
 
+// Selectable keyboard shortcut options for toggling the popup menu
+const SHORTCUT_OPTIONS = [
+    { accel: '<Super><Alt>o', label: 'Super + Alt + O (Default)' },
+    { accel: '<Control><Alt>o', label: 'Ctrl + Alt + O' },
+    { accel: '<Super><Shift>o', label: 'Super + Shift + O' },
+    { accel: '', label: 'Disabled' },
+];
+
 // Preferences object built by the shell then asked to fill the Adw window it owns
 export default class OpenCodeGoPrefs {
-    // Adds credentials, panel appearance, and alert pages to preferences window
+    // Adds General, Panel & Appearance, and Privacy & About pages to the preferences window
     fillPreferencesWindow(window) {
         const settings = getSettings();
+        window.add(this._buildGeneralPage(settings));
+        window.add(this._buildAppearancePage(settings));
+        window.add(this._buildAboutPage(settings));
+    }
 
-        const page = new Adw.PreferencesPage({ title: 'OpenCode Go', icon_name: 'applications-system-symbolic' });
+    // Builds the General page: Console Credentials, Cookie Guide, Connection Test, and Usage Alerts
+    _buildGeneralPage(settings) {
+        const page = new Adw.PreferencesPage({
+            title: 'General',
+            icon_name: 'preferences-system-symbolic',
+        });
+
         const credentials = new Adw.PreferencesGroup({
             title: 'Console Credentials',
-            description: 'In DevTools (F12) → Application → Cookies → opencode.ai: copy "__Host-console_session" (NOT "auth")',
+            description: 'Paste your Workspace ID (or full Console URL) and "__Host-console_session" cookie',
         });
         page.add(credentials);
 
-        // Workspace ID entry
-        const wsRow = new Adw.EntryRow({ title: 'Workspace ID (wrk_…)' });
+        // Workspace ID entry with automatic URL extraction when pasting a full console link
+        const wsRow = new Adw.EntryRow({ title: 'Workspace ID (wrk_… or Console URL)' });
         settings.bind('workspace-id', wsRow, 'text', Gio.SettingsBindFlags.DEFAULT);
+        wsRow.connect('changed', () => {
+            const raw = wsRow.text || '';
+            const extracted = Api.extractWorkspaceId(raw);
+            if (extracted && extracted !== raw.trim() && /^(wrk_|org_)/.test(extracted)) {
+                wsRow.text = extracted;
+            }
+        });
         credentials.add(wsRow);
 
         // Session cookie entry with password reveal so the token is not left readable
@@ -49,37 +74,25 @@ export default class OpenCodeGoPrefs {
         // Expandable browser guide explaining how to retrieve __Host-console_session
         const guideRow = new Adw.ExpanderRow({
             title: 'How to find your Session Cookie',
-            subtitle: 'Step-by-step instructions for Chrome, Brave, Firefox & Edge',
+            subtitle: 'Step-by-step instructions for Chrome, Brave, Firefox &amp; Edge',
         });
-        const step1 = new Adw.ActionRow({
-            title: '1. Open OpenCode Console',
-            subtitle: 'Navigate to https://opencode.ai/console in your browser',
-        });
-        const step2 = new Adw.ActionRow({
-            title: '2. Open Developer Tools',
-            subtitle: 'Press F12 (or right-click → Inspect) to open the DevTools panel',
-        });
-        const step3 = new Adw.ActionRow({
-            title: '3. Find __Host-console_session',
-            subtitle: 'Go to Application tab (Storage in Firefox) → Cookies → https://opencode.ai',
-        });
-        const step4 = new Adw.ActionRow({
-            title: '4. Copy the Cookie Value',
-            subtitle: 'Copy the value of __Host-console_session (starts with st_...) and paste it above',
-        });
-        const stepNote = new Adw.ActionRow({
-            title: '⚠️ Avoid "auth" (Fe26...) Cookie',
-            subtitle: 'Do NOT copy "auth". That cookie belongs to the marketing site and causes HTTP 401.',
-        });
-        guideRow.add_row(step1);
-        guideRow.add_row(step2);
-        guideRow.add_row(step3);
-        guideRow.add_row(step4);
-        guideRow.add_row(stepNote);
+        const steps = [
+            ['1. Open OpenCode Console', 'Navigate to https://opencode.ai/console in your browser'],
+            ['2. Open Developer Tools', 'Press F12 (or right-click → Inspect) to open the DevTools panel'],
+            ['3. Find __Host-console_session', 'Go to Application tab (Storage in Firefox) → Cookies → https://opencode.ai'],
+            ['4. Copy the Cookie Value', 'Copy the value of __Host-console_session (starts with st_...) and paste it above'],
+            ['⚠️ Avoid "auth" (Fe26...) Cookie', 'Do NOT copy "auth". That cookie belongs to the marketing site and causes HTTP 401.'],
+        ];
+        for (const [title, subtitle] of steps) {
+            guideRow.add_row(new Adw.ActionRow({ title, subtitle }));
+        }
         credentials.add(guideRow);
 
-        // One-shot connection check, mirroring the KDE config's Test button
-        const testRow = new Adw.ActionRow({ title: 'Test Connection' });
+        // One-shot connection check with automatic 5xx retry, mirroring the panel indicator
+        const testRow = new Adw.ActionRow({
+            title: 'Test Connection',
+            subtitle: 'Verify credentials against the OpenCode Console API',
+        });
         const testButton = new Gtk.Button({
             label: 'Test',
             valign: Gtk.Align.CENTER,
@@ -90,13 +103,48 @@ export default class OpenCodeGoPrefs {
         testRow.activatable_widget = testButton;
         credentials.add(testRow);
 
-        const behaviour = new Adw.PreferencesGroup({ title: 'Panel and Refresh' });
+        // Quota alerts group
+        const notifyGroup = new Adw.PreferencesGroup({ title: 'Usage Alerts' });
+        page.add(notifyGroup);
+
+        const notifyRow = new Adw.SwitchRow({
+            title: 'Enable quota notifications',
+            subtitle: 'Show a desktop notification when any window crosses the alert threshold',
+        });
+        settings.bind('enable-notifications', notifyRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        notifyGroup.add(notifyRow);
+
+        const thresholdRow = new Adw.SpinRow({
+            title: 'Alert threshold (%)',
+            subtitle: 'Trigger notification and draw a threshold marker on progress bars',
+            adjustment: new Gtk.Adjustment({
+                lower: NOTIFY_THRESHOLD_MIN, upper: NOTIFY_THRESHOLD_MAX, step_increment: 5,
+                value: settings.get_uint('notification-threshold'),
+            }),
+        });
+        settings.bind('notification-threshold', thresholdRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        notifyGroup.add(thresholdRow);
+
+        return page;
+    }
+
+    // Builds the Panel & Appearance page: badge modes, hover behavior, compact mode, and shortcut selector
+    _buildAppearancePage(settings) {
+        const page = new Adw.PreferencesPage({
+            title: 'Panel & Appearance',
+            icon_name: 'applications-graphics-symbolic',
+        });
+
+        const behaviour = new Adw.PreferencesGroup({
+            title: 'Top Panel &amp; Popup Layout',
+            description: 'Tip: Middle-click the panel icon to refresh immediately, or scroll over it to cycle metrics',
+        });
         page.add(behaviour);
 
-        // Panel percentage badge toggle, mirroring the KDE widget's panel badge
+        // Panel percentage badge toggle
         const badgeRow = new Adw.SwitchRow({
             title: 'Show percentage in the panel',
-            subtitle: 'Enable or disable numeric metric in the top panel bar',
+            subtitle: 'Display numeric quota metric next to the branded O✦ panel icon',
         });
         settings.bind('show-panel-badge', badgeRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviour.add(badgeRow);
@@ -106,7 +154,7 @@ export default class OpenCodeGoPrefs {
             { id: 'weekly', name: 'Weekly Limit (Default)' },
             { id: 'fiveHour', name: '5-Hour Rolling Limit' },
             { id: 'monthly', name: 'Monthly Limit' },
-            { id: 'all', name: 'All Three Limits (with icons)' },
+            { id: 'all', name: 'All Three Limits (5h · W · M)' },
             { id: 'none', name: 'Icon Only' },
         ];
         const stringList = new Gtk.StringList();
@@ -114,24 +162,37 @@ export default class OpenCodeGoPrefs {
 
         const trayRow = new Adw.ComboRow({
             title: 'Tray Icon Display',
-            subtitle: 'Choose which quota metrics to display in the panel bar',
+            subtitle: 'Choose which quota metrics appear in the top bar',
             model: stringList,
         });
-
         const currentMode = settings.get_string('tray-display-mode') || 'weekly';
-        const currentIndex = Math.max(0, trayModes.findIndex(m => m.id === currentMode));
-        trayRow.selected = currentIndex;
-
+        trayRow.selected = Math.max(0, trayModes.findIndex(m => m.id === currentMode));
         trayRow.connect('notify::selected', () => {
             const selectedItem = trayModes[trayRow.selected];
             if (selectedItem) settings.set_string('tray-display-mode', selectedItem.id);
         });
         behaviour.add(trayRow);
 
+        // Hover-to-open switch with 160ms intent delay
+        const hoverRow = new Adw.SwitchRow({
+            title: 'Open popup on hover',
+            subtitle: 'Automatically open the usage card after a brief hover over the panel icon',
+        });
+        settings.bind('hover-to-open', hoverRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviour.add(hoverRow);
+
+        // Compact popup view toggle
+        const compactRow = new Adw.SwitchRow({
+            title: 'Compact popup view',
+            subtitle: 'Condenses row spacing and moves reset countdowns inline for a smaller footprint',
+        });
+        settings.bind('compact-mode', compactRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behaviour.add(compactRow);
+
         // Refresh interval spin row, 1–60 minutes
         const refreshRow = new Adw.SpinRow({
             title: 'Refresh interval (minutes)',
-            subtitle: 'How often the panel icon re-checks your usage',
+            subtitle: 'How often the indicator polls your usage in the background',
             adjustment: new Gtk.Adjustment({
                 lower: REFRESH_MIN, upper: REFRESH_MAX, step_increment: 1,
                 value: settings.get_uint('refresh-minutes'),
@@ -140,47 +201,40 @@ export default class OpenCodeGoPrefs {
         settings.bind('refresh-minutes', refreshRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         behaviour.add(refreshRow);
 
-        // Compact popup view toggle
-        const compactRow = new Adw.SwitchRow({
-            title: 'Compact popup view',
-            subtitle: 'Reduces padding and height for a smaller popup menu footprint',
-        });
-        settings.bind('compact-mode', compactRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        behaviour.add(compactRow);
+        // Interactive keyboard shortcut selector group
+        const shortcutGroup = new Adw.PreferencesGroup({ title: 'Keyboard Shortcut' });
+        page.add(shortcutGroup);
 
-        // Global keyboard shortcut to toggle popup menu
-        const shortcutRow = new Adw.ActionRow({
+        const shortcutModel = new Gtk.StringList();
+        SHORTCUT_OPTIONS.forEach(s => shortcutModel.append(s.label));
+        const shortcutRow = new Adw.ComboRow({
             title: 'Toggle Popup Shortcut',
-            subtitle: 'Press <Super><Alt>o from anywhere to open or dismiss the usage popup',
+            subtitle: 'Global shortcut to open or close the usage popup from anywhere',
+            model: shortcutModel,
         });
-        shortcutRow.add_prefix(new Gtk.Image({ icon_name: 'input-keyboard-symbolic' }));
-        behaviour.add(shortcutRow);
-
-        // Quota alerts group
-        const notifyGroup = new Adw.PreferencesGroup({ title: 'Usage Alerts' });
-        page.add(notifyGroup);
-
-        const notifyRow = new Adw.SwitchRow({
-            title: 'Enable quota notifications',
-            subtitle: 'Alert when quota window crosses threshold percentage',
+        const currentAccel = (settings.get_strv('toggle-shortcut') || [])[0] || '';
+        const accelIdx = SHORTCUT_OPTIONS.findIndex(s => s.accel === currentAccel);
+        shortcutRow.selected = accelIdx >= 0 ? accelIdx : 0;
+        shortcutRow.connect('notify::selected', () => {
+            const chosen = SHORTCUT_OPTIONS[shortcutRow.selected];
+            if (chosen) {
+                settings.set_strv('toggle-shortcut', chosen.accel ? [chosen.accel] : []);
+            }
         });
-        settings.bind('enable-notifications', notifyRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        notifyGroup.add(notifyRow);
+        shortcutGroup.add(shortcutRow);
 
-        const thresholdRow = new Adw.SpinRow({
-            title: 'Alert threshold (%)',
-            subtitle: 'Trigger alert when usage reaches this percentage',
-            adjustment: new Gtk.Adjustment({
-                lower: NOTIFY_THRESHOLD_MIN, upper: NOTIFY_THRESHOLD_MAX, step_increment: 5,
-                value: settings.get_uint('notification-threshold'),
-            }),
+        return page;
+    }
+
+    // Builds the Privacy & About page: security guarantees, credential wipe, and repository link
+    _buildAboutPage(settings) {
+        const page = new Adw.PreferencesPage({
+            title: 'Privacy & About',
+            icon_name: 'help-about-symbolic',
         });
-        settings.bind('notification-threshold', thresholdRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-        notifyGroup.add(thresholdRow);
 
-        // Privacy & Data Security group (EGO review compliant)
         const privacyGroup = new Adw.PreferencesGroup({
-            title: 'Privacy & Data Security',
+            title: 'Privacy &amp; Data Security',
             description: 'Transparent data handling according to GNOME extension security standards',
         });
         page.add(privacyGroup);
@@ -218,8 +272,7 @@ export default class OpenCodeGoPrefs {
         clearRow.activatable_widget = clearButton;
         privacyGroup.add(clearRow);
 
-        // About & Legal Disclaimer group
-        const aboutGroup = new Adw.PreferencesGroup({ title: 'About & Legal Disclaimer' });
+        const aboutGroup = new Adw.PreferencesGroup({ title: 'About &amp; Legal Disclaimer' });
         page.add(aboutGroup);
 
         const disclaimerRow = new Adw.ActionRow({
@@ -231,13 +284,13 @@ export default class OpenCodeGoPrefs {
 
         const licenseRow = new Adw.ActionRow({
             title: 'OpenCode Go Usage Tracker v2.8.1',
-            subtitle: 'Licensed under MIT. © Mayanktaker Computers & Web Development',
+            subtitle: 'Licensed under MIT. © Mayanktaker Computers &amp; Web Development',
         });
         licenseRow.add_prefix(new Gtk.Image({ icon_name: 'help-about-symbolic' }));
         aboutGroup.add(licenseRow);
 
         const repoRow = new Adw.ActionRow({
-            title: 'Source Code & Issue Tracker',
+            title: 'Source Code &amp; Issue Tracker',
             subtitle: 'github.com/Mayanktaker/OpencodeGo-KDE-GNOME',
         });
         repoRow.add_prefix(new Gtk.Image({ icon_name: 'web-browser-symbolic' }));
@@ -252,12 +305,12 @@ export default class OpenCodeGoPrefs {
         repoRow.activatable_widget = repoButton;
         aboutGroup.add(repoRow);
 
-        window.add(page);
+        return page;
     }
 
-    // Runs a single console request and reports the outcome on the row's subtitle
+    // Runs a console request (with 404 route-walk and 5xx retry) and reports the outcome on the row's subtitle
     _testConnection(settings, button, row) {
-        const ws = settings.get_string('workspace-id');
+        const ws = Api.extractWorkspaceId(settings.get_string('workspace-id'));
         const cookie = settings.get_string('auth-cookie');
 
         // Reuse api.js validation so the message matches what the panel would show
@@ -269,25 +322,46 @@ export default class OpenCodeGoPrefs {
 
         button.sensitive = false;
         row.subtitle = 'Checking…';
-        const proc = Gio.Subprocess.new(['sh', '-c', Api.buildCurlCommand(ws, cookie, 0)],
+        this._attemptTestRoute(ws, cookie, 0, 0, button, row);
+    }
+
+    // Executes one test curl attempt, retrying transient 5xx responses and walking routes on 404
+    _attemptTestRoute(ws, cookie, routeIdx, attemptIdx, button, row) {
+        const proc = Gio.Subprocess.new(['sh', '-c', Api.buildCurlCommand(ws, cookie, routeIdx)],
             Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
         proc.communicate_utf8_async(null, null, (obj, res) => {
-            button.sensitive = true;
             let stdout = '', stderr = '', exitStatus = 0;
             try {
                 [, stdout, stderr] = obj.communicate_utf8_finish(res);
                 exitStatus = exitCodeOf(obj.get_if_exited() ? obj.get_status() : 0);
             } catch (e) {
+                button.sensitive = true;
                 this._report(row, 'Could not reach the console. Check your internet connection.', true);
                 return;
             }
             const result = Api.parseCurlOutput(stdout, stderr, exitStatus);
+            if (!result.error && !result.data && result.httpStatus === 404) {
+                if (routeIdx + 1 < Api.consoleRouteCount()) {
+                    this._attemptTestRoute(ws, cookie, routeIdx + 1, 0, button, row);
+                } else {
+                    button.sensitive = true;
+                    this._report(row, Api.noRouteError(), true);
+                }
+                return;
+            }
+            if (result.httpStatus >= 500 && attemptIdx + 1 < Api.maxAttemptsPerRoute()) {
+                this._attemptTestRoute(ws, cookie, routeIdx, attemptIdx + 1, button, row);
+                return;
+            }
+            button.sensitive = true;
             if (result.error) {
                 this._report(row, result.error, true);
                 return;
             }
             const percent = result.data.usagePercent;
-            this._report(row, `Connected — weekly usage ${percent}%`, false);
+            const hBar = (result.data.hourly && result.data.hourly[0]) ? ` · 5h ${result.data.hourly[0].value}%` : '';
+            const mBar = (result.data.monthly && result.data.monthly[0]) ? ` · month ${result.data.monthly[0].value}%` : '';
+            this._report(row, `Connected — weekly usage ${percent}%${hBar}${mBar}`, false);
         });
     }
 

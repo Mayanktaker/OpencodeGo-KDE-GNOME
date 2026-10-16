@@ -51,8 +51,9 @@ if (settings) {
     eq(Settings.getEnableNotifications({ get_boolean: () => true }), true, 'enable notifications accessor');
     eq(Settings.getNotificationThreshold({ get_uint: () => 80 }), 80, 'notification threshold accessor');
     eq(Settings.getCompactMode({ get_boolean: () => true }), true, 'compact mode accessor');
+    eq(Settings.getHoverToOpen({ get_boolean: () => true }), true, 'hover-to-open accessor');
     eq(Settings.getToggleShortcut({ get_strv: () => ['<Super><Alt>o'] })[0], '<Super><Alt>o', 'toggle shortcut accessor');
-    eq(Settings.WATCHED_KEYS.join(','), 'workspace-id,auth-cookie,refresh-minutes,show-panel-badge,tray-display-mode,enable-notifications,notification-threshold,compact-mode,toggle-shortcut', 'watched keys cover every setting');
+    eq(Settings.WATCHED_KEYS.join(','), 'workspace-id,auth-cookie,refresh-minutes,show-panel-badge,tray-display-mode,enable-notifications,notification-threshold,compact-mode,toggle-shortcut,hover-to-open', 'watched keys cover every setting');
     // disconnect must not throw when there is nothing connected
     Settings.connectChanged({ connect: () => 1, disconnect: () => {} }, ['workspace-id'], () => {})();
     ok(true, 'connectChanged returns a working unsubscribe');

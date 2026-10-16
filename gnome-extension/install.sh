@@ -40,9 +40,10 @@ rsync -a --delete --delete-excluded --exclude 'install.sh' --exclude 'tests' --e
 # Compile the gsettings schema into the installed copy
 glib-compile-schemas "$DEST/schemas/"
 
-# Enable live when the running shell already knows the extension
+# Cycle disable -> enable when the running shell already knows the extension so stylesheet.css reloads live
+gnome-extensions disable "$UUID" 2>/dev/null || true
 if gnome-extensions enable "$UUID" 2>/dev/null; then
-    echo "Enabled $UUID in the running shell."
+    echo "Enabled $UUID in the running shell (cycled disable/enable to reload styles)."
 else
     # A shell that started before this install has never seen the directory, and
     # GNOME offers no rescan: queue the extension in dconf so it comes up enabled.

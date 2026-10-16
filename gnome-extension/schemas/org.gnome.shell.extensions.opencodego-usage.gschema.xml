@@ -56,5 +56,11 @@
       <summary>Toggle popup shortcut</summary>
       <description>Keyboard shortcut to toggle the OpenCode Go usage popup</description>
     </key>
+    <!-- Hover-to-open toggle for the panel indicator -->
+    <key type="b" name="hover-to-open">
+      <default>true</default>
+      <summary>Open popup on hover</summary>
+      <description>Automatically open the usage popup when hovering over the top panel icon</description>
+    </key>
   </schema>
 </schemalist>
