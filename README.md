@@ -2,11 +2,11 @@
 # 📊 OpenCode Go Usage Tracker — KDE Plasma 6 & GNOME Shell Extension
 
 [![KDE Plasma](https://img.shields.io/badge/KDE-Plasma%206.0%2B-blue?logo=kde)](https://kde.org)
-[![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-46%E2%80%9350-blue?logo=gnome)](https://www.gnome.org/)
+[![GNOME Shell](https://img.shields.io/badge/GNOME%20Shell-46%E2%80%9351-blue?logo=gnome)](https://www.gnome.org/)
 [![Qt](https://img.shields.io/badge/Qt-6.5%2B-green?logo=qt)](https://www.qt.io/)
 [![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 
-A unified Linux desktop companion and command-line utility for tracking your **OpenCode Go** subscription usage across **Rolling (5h)**, **Weekly**, and **Monthly** quota windows — featuring native integrations for **KDE Plasma 6**, **GNOME Shell (46–50)**, and any terminal via the **`opencode-usage`** CLI.
+A unified Linux desktop companion and command-line utility for tracking your **OpenCode Go** subscription usage across **Rolling (5h)**, **Weekly**, and **Monthly** quota windows — featuring native integrations for **KDE Plasma 6**, **GNOME Shell (46–51)**, and any terminal via the **`opencode-usage`** CLI.
 
 ---
 
@@ -22,13 +22,17 @@ A unified Linux desktop companion and command-line utility for tracking your **O
 
 - 🎨 **Redesigned Brand Logo (`<O✦>`)**: Custom cyan-teal vector logo combining code brackets `< >`, central ring `O`, and glowing spark `✦`, integrated seamlessly across panel icons, header containers, SVGs, and system theme icon sizes (16px–128px).
 - 🐧 **Full GNOME Shell Extension**:
-  - Pure monochrome symbolic icon (`opencodego-symbolic.svg`) matching GNOME Shell top-bar indicators.
+  - Pure monochrome symbolic icon (`opencodego-symbolic.svg`) matching GNOME Shell top-bar indicators, with spacing and hover pill that match the native indicators.
   - Full-color glowing brand header in popup card (`opencodego-brand.svg`).
-  - Sleek popup with progress bars, reset countdowns, and currency quota metrics ($ spent / $ limit).
+  - Redesigned usage card: live status pill (`LIVE` / `DEMO MODE` / `STALE` / `AUTH ERROR`), timestamp + weekly summary, and round **Refresh** / **Open Console** / **Settings** buttons in the header.
+  - Animated horizontal-gradient progress bars with an alert-threshold marker, plus `$used / $limit ($left)` and a compact `↻ 4h 35m` reset badge under every bar.
+  - **Copy Summary** button that puts your Rolling, Weekly, and Monthly figures on the clipboard.
   - Instant in-popup **Refresh** button that updates figures live without dismissing the menu.
-  - Global keyboard shortcut (`<Super><Alt>o`) to toggle the popup instantly from anywhere.
-  - Libadwaita Preferences dialog with interactive **Test Connection**, step-by-step **Session Cookie Guide**, and EGO-compliant **Privacy & Data Security** controls.
-  - Flexible top-bar display modes: Weekly Limit (Default), 5-Hour Rolling Limit, Monthly Limit, All Three Limits with icons, or Icon Only.
+  - Global keyboard shortcut (`<Super><Alt>o`) to toggle the popup instantly from anywhere, and a middle-click that refreshes on the spot.
+  - Scroll over the panel icon to cycle the displayed limit; a hover-to-open switch stops the card popping up when your mouse merely passes the top bar.
+  - Libadwaita Preferences split into **General**, **Panel & Appearance**, and **Privacy & About** tabs, with an interactive **Test Connection** (auto-retries temporary server hiccups), step-by-step **Session Cookie Guide**, and EGO-compliant **Privacy & Data Security** controls.
+  - Paste your whole `opencode.ai/console/…` link into the Workspace ID box and the ID is pulled out for you.
+  - Flexible top-bar display modes: Weekly Limit (Default), 5-Hour Rolling Limit, Monthly Limit, All Three Limits (`5h · W · M`), or Icon Only.
   - Multi-window quota alert notifications (Rolling, Weekly, Monthly) and Compact Mode toggle.
 - 📊 **Real-Time Usage Tracking**: Fetches live data from the OpenCode Console JSON API `opencode.ai/console/api/go/status` via `curl`. Supports route-walk resilience, transient 5xx retry handling, and graceful stale-figures fallback.
 - ⏱️ **Per-Window Reset Countdowns**: Natural-language `(resets in 3 hours 45 minutes)` countdowns for Rolling (5h), Weekly, and Monthly windows.

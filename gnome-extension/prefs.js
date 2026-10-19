@@ -7,6 +7,7 @@ import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 import * as Api from './api.js';
 import { getSettings } from './settings.js';
+import { VERSION } from './version.js';
 
 // Bounds for the refresh spin row, in minutes
 const REFRESH_MIN = 1;
@@ -283,7 +284,7 @@ export default class OpenCodeGoPrefs {
         aboutGroup.add(disclaimerRow);
 
         const licenseRow = new Adw.ActionRow({
-            title: 'OpenCode Go Usage Tracker v2.8.1',
+            title: `OpenCode Go Usage Tracker v${VERSION}`,
             subtitle: 'Licensed under MIT. © Mayanktaker Computers &amp; Web Development',
         });
         licenseRow.add_prefix(new Gtk.Image({ icon_name: 'help-about-symbolic' }));

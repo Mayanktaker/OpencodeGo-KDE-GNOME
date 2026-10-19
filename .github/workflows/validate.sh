@@ -7,6 +7,9 @@ set -euo pipefail
 echo "Checking api.js syntax..."
 node --check contents/code/api.js
 
+echo "Checking version sync..."
+bash tools/version.sh check
+
 echo "Checking QML brace balance..."
 FAIL=0
 for f in $(find contents/ui -name '*.qml'); do

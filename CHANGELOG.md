@@ -1,6 +1,15 @@
 <!-- © Mayanktaker Computers & Web Development | https://mayanktaker.com -->
 # Changelog — OpenCode Go Usage Tracker
 
+## v2.8.2
+
+**What's new**
+- The GNOME extension's About section now shows the exact release you have installed, so you can confirm your build at a glance.
+- Every download now comes with a single checksum file that covers the whole bundle, so you can confirm all files are intact in one step.
+
+**Bug fixes**
+- The published checksum file now lists the file names exactly as they appear in your download folder, so verifying a release no longer fails on the GNOME extension archives.
+
 ## v2.8.1
 
 **What's new**

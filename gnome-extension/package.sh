@@ -8,7 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_DIR="${SCRIPT_DIR}/build"
 UUID="opencodego-usage@mayanktaker.com"
-VERSION="2.8.1"
+# Version comes from the root VERSION file, the single source of truth
+VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 ZIP_NAME="${UUID}-v${VERSION}.shell-extension.zip"
 CANONICAL_ZIP="${UUID}.shell-extension.zip"
 
@@ -28,6 +29,7 @@ cp "${SCRIPT_DIR}/prefs.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/popup.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/settings.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/api.js" "${BUILD_DIR}/package/"
+cp "${SCRIPT_DIR}/version.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/stylesheet.css" "${BUILD_DIR}/package/"
 
 # Copy schemas (EGO requires XML source only, gschemas.compiled is generated on client)

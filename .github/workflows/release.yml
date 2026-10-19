@@ -100,7 +100,12 @@ jobs:
 
       - name: Generate Checksums
         run: |
-          sha256sum "${{ env.PLASMOID_FILE }}" "${{ env.ZIP_FILE }}" gnome-extension/build/*.shell-extension.zip > SHA256SUMS
+          # Checksums must reference the uploaded asset names (flat), not repo paths,
+          # so `sha256sum -c SHA256SUMS` works in a plain download folder
+          STAGE="$(mktemp -d)"
+          cp "${{ env.PLASMOID_FILE }}" "${{ env.ZIP_FILE }}" "$STAGE/"
+          cp gnome-extension/build/*.shell-extension.zip "$STAGE/"
+          (cd "$STAGE" && sha256sum *.plasmoid *.zip > "$GITHUB_WORKSPACE/SHA256SUMS")
           echo "SHA256SUMS generated:"
           cat SHA256SUMS
 

@@ -45,6 +45,12 @@ jobs:
       - name: Validate packaging script
         run: bash gnome-extension/package.sh
 
+      - name: Check the version is in sync
+        run: bash tools/version.sh check
+
+      - name: Validate the EGO submission bundle
+        run: bash tools/ego-submit.sh
+
   live:
     name: Headless shell end-to-end tests
     runs-on: ubuntu-latest
