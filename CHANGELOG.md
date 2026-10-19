@@ -12,6 +12,8 @@
 - The GNOME extension now uses the standard `opencodego-usage@mayanktaker.com` identity required by extensions.gnome.org, so store validation passes cleanly.
 
 **Bug fixes**
+- Fixed the GNOME top-bar item so it now matches the spacing of your other indicators: the logo and percentage sit neatly side by side instead of drifting apart, the hover highlight is a full-height pill like your neighbours, and the usage card now opens with a proper gap below the top bar instead of hugging it.
+- Fixed a journal warning where progress-bar animation timers kept repainting destroyed popup actors across disable/enable cycles.
 - Fixed Pango markup ampersand warnings in the GNOME Preferences window so all section titles and subtitles display properly.
 - Fixed long error messages stretching the GNOME popup menu across the screen by wrapping status and error banners inside a fixed-width card with a direct "Open Credentials Settings" button.
 - Fixed an awkward left indentation on the reset countdown text and restored compact inline reset timers when Compact Popup View is enabled.

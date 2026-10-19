@@ -1,12 +1,20 @@
 /* © Mayanktaker Computers & Web Development | https://mayanktaker.com */
 /* Panel icon and popup styles for the OpenCode Go usage extension */
 
-/* Panel icon and badge container in top bar */
+/* Panel icon and badge container in top bar — matches Vitals .vitals-panel-menu */
 .opencodego-panel-box {
-    spacing: 5px;
+    spacing: 4px;
     margin: 0;
-    padding: 0;
+    padding: 3px;
     y-align: center;
+}
+
+/* Override GNOME's default .system-status-icon 6px padding + 4px margin so icon and badge sit neatly */
+#panel .panel-button .opencodego-panel-box .system-status-icon,
+.opencodego-panel-icon {
+    icon-size: 16px;
+    padding: 0;
+    margin: 0 2px 0 0;
 }
 
 /* Percentage badge shown next to the panel icon with tabular numerals */
@@ -14,7 +22,7 @@
     font-weight: 700;
     font-feature-settings: "tnum";
     margin: 0;
-    padding: 0 1px;
+    padding: 0;
     y-align: center;
 }
 

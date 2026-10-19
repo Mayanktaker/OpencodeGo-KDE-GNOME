@@ -57,15 +57,17 @@ const WINDOWS = [
     { label: 'Monthly', slot: 'monthly', resetKey: 'monthly', color: COLOR_ACCENT_TEAL }
 ];
 
-// Active animation timer ids cleared on menu rebuild so destroyed actors are never repainted
-let _activeAnimTimers = [];
+// Shared across duplicate module records: the shell keeps the static import cached
+// while enable() also loads a cache-busted copy, so timers from either copy stop together
+if (!globalThis.__opencodegoAnimTimers) globalThis.__opencodegoAnimTimers = [];
+const _activeAnimTimers = globalThis.__opencodegoAnimTimers;
 
-// Stops all active bar animation timers before rebuilding or closing the popup
-function stopBarAnimations() {
-    for (const id of _activeAnimTimers) {
+// Stops all active bar animation timers before rebuilding, closing, or destroying the popup
+export function stopBarAnimations() {
+    for (const id of [..._activeAnimTimers]) {
         try { GLib.source_remove(id); } catch (_) {}
     }
-    _activeAnimTimers = [];
+    _activeAnimTimers.length = 0;
 }
 
 // Converts a hex color string (#rrggbb) to Cairo RGB channels (0..1)
@@ -286,7 +288,8 @@ function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode =
         bar._animProgress = 1 - Math.pow(1 - t, 3);
         try { bar.queue_repaint(); } catch (_) { return GLib.SOURCE_REMOVE; }
         if (t >= 1) {
-            _activeAnimTimers = _activeAnimTimers.filter(id => id !== timerId);
+            const i = _activeAnimTimers.indexOf(timerId);
+            if (i !== -1) _activeAnimTimers.splice(i, 1);
             return GLib.SOURCE_REMOVE;
         }
         return GLib.SOURCE_CONTINUE;
@@ -512,6 +515,28 @@ export function buildMenuContent(
     shortcutAccel = '<Super><Alt>o'
 ) {
     clearMenuContent(menu);
+
+    // Ensure the live PanelMenu.Button uses FILL vertical alignment so the top-bar hover pill
+    // has full 23px height and BoxPointer positions the popup 6px below the panel bar
+    const indicator = menu ? (menu.sourceActor || menu._sourceActor) : null;
+    if (indicator) {
+        indicator.y_align = Clutter.ActorAlign.FILL;
+        indicator.y_expand = true;
+        const panelBox = indicator.get_first_child ? indicator.get_first_child() : null;
+        if (panelBox) {
+            panelBox.y_align = Clutter.ActorAlign.CENTER;
+            panelBox.y_expand = true;
+            for (const ch of panelBox.get_children()) {
+                ch.y_align = Clutter.ActorAlign.CENTER;
+                if (ch instanceof St.Icon) {
+                    ch.y_expand = false;
+                    ch.add_style_class_name('opencodego-panel-icon');
+                } else {
+                    ch.y_expand = true;
+                }
+            }
+        }
+    }
 
     // Card header with brand icon, title + status chip, subtitle, and 3 circular action buttons
     const header = new St.BoxLayout({

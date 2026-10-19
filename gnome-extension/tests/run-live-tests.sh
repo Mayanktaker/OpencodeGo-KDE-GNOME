@@ -255,8 +255,10 @@ F_PCT=$(field "$FIRST" percent); L_PCT=$(field "$LAST" percent)
 has "popup still shows the windows" "Rolling (5h)" "$LAST"
 has "popup notes the outage" "showing last known figures" "$LAST"
 F_ROWS=$(field "$FIRST" menuRows); L_ROWS=$(field "$LAST" menuRows)
-[ -n "$F_ROWS" ] && [ "$F_ROWS" = "$L_ROWS" ] \
-    && ok "popup did not grow across refreshes ($L_ROWS rows)" \
+# The transient outage banner adds exactly one row to the ok-state layout, so
+# L_ROWS == F_ROWS + 1 is the steady state; anything more means rebuild duplication
+[ -n "$F_ROWS" ] && [ "${L_ROWS:-0}" -eq "$((F_ROWS + 1))" ] \
+    && ok "popup stable across refreshes ($F_ROWS rows + transient banner)" \
     || no "popup did not grow across refreshes" "$F_ROWS -> $L_ROWS"
 
 # ------------------------------------------------------------ prefs window

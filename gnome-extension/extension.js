@@ -47,11 +47,11 @@ function createPanelIcon(extensionPath) {
     const iconPath = GLib.build_filenamev([extensionPath, 'icons', BRANDED_ICON_FILE]);
     if (!GLib.file_test(iconPath, GLib.FileTest.EXISTS)) {
         console.warn(`${BRANDED_ICON_FILE} missing from ${extensionPath}/icons — using ${FALLBACK_ICON_NAME}`);
-        return new St.Icon({ icon_name: FALLBACK_ICON_NAME, style_class: 'system-status-icon', y_align: Clutter.ActorAlign.CENTER });
+        return new St.Icon({ icon_name: FALLBACK_ICON_NAME, style_class: 'system-status-icon opencodego-panel-icon', y_align: Clutter.ActorAlign.CENTER });
     }
     return new St.Icon({
         gicon: new Gio.FileIcon({ file: Gio.File.new_for_path(iconPath) }),
-        style_class: 'system-status-icon',
+        style_class: 'system-status-icon opencodego-panel-icon',
         y_align: Clutter.ActorAlign.CENTER,
     });
 }
@@ -73,8 +73,9 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         this._hoverToOpen = true;
         this._hoverTimerId = null;
 
-        this.y_align = Clutter.ActorAlign.CENTER;
-        this.y_expand = true;
+        // Keep PanelMenu.Button y_align at FILL (default) so the top-bar hover pill
+        // spans the standard 23px height and BoxPointer places the popup 6px below the panel
+        this.y_align = Clutter.ActorAlign.FILL;
 
         // Icon plus the optional percentage badge, side by side in the panel
         this._box = new St.BoxLayout({
@@ -84,7 +85,6 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         });
         const icon = createPanelIcon(extensionPath);
         icon.set_y_align(Clutter.ActorAlign.CENTER);
-        icon.set_y_expand(true);
         this._box.add_child(icon);
 
         this._badge = new St.Label({
@@ -354,10 +354,14 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         });
     }
 
-    // Stops timers, kills any in-flight curl, and leaves nothing behind for disable()
+    // Stops timers, kills any in-flight curl, stops bar animations, and leaves nothing behind for disable()
     destroy() {
         if (this._hoverTimerId) { GLib.source_remove(this._hoverTimerId); this._hoverTimerId = null; }
         if (this._timerId) { GLib.source_remove(this._timerId); this._timerId = null; }
+        // Bar animation timers outlive menu rebuilds unless stopped, so halt them
+        // before destroy() disposes the DrawingAreas they repaint
+        try { Popup.stopBarAnimations(); } catch (_) {}
+        try { if (this._popupModule && this._popupModule !== Popup) this._popupModule.stopBarAnimations(); } catch (_) {}
         this.cancelRequest();
         super.destroy();
     }
