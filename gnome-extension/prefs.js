@@ -130,6 +130,18 @@ export default class OpenCodeGoPrefs {
         settings.bind('notification-threshold', thresholdRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         notifyGroup.add(thresholdRow);
 
+        // Per-meter switches so one noisy window can be silenced individually
+        const meterRows = [
+            ['notify-rolling', 'Alert for Rolling (5h)', 'Include the rolling window in quota alerts'],
+            ['notify-weekly', 'Alert for Weekly', 'Include the weekly window in quota alerts'],
+            ['notify-monthly', 'Alert for Monthly', 'Include the monthly window in quota alerts'],
+        ];
+        for (const [key, title, subtitle] of meterRows) {
+            const row = new Adw.SwitchRow({ title, subtitle });
+            settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
+            notifyGroup.add(row);
+        }
+
         return page;
     }
 

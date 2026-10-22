@@ -62,6 +62,22 @@
       <summary>Notification threshold</summary>
       <description>Percentage threshold to trigger desktop notification (50-95%)</description>
     </key>
+    <!-- Per-meter alert toggles so a noisy window can be silenced individually -->
+    <key type="b" name="notify-rolling">
+      <default>true</default>
+      <summary>Alert for the rolling window</summary>
+      <description>Include the Rolling (5h) window in quota notifications</description>
+    </key>
+    <key type="b" name="notify-weekly">
+      <default>true</default>
+      <summary>Alert for the weekly window</summary>
+      <description>Include the Weekly window in quota notifications</description>
+    </key>
+    <key type="b" name="notify-monthly">
+      <default>true</default>
+      <summary>Alert for the monthly window</summary>
+      <description>Include the Monthly window in quota notifications</description>
+    </key>
     <!-- Compact popup view for minimal footprint -->
     <key type="b" name="compact-mode">
       <default>false</default>

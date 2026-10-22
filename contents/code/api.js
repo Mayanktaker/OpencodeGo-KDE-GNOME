@@ -576,3 +576,117 @@ function generateCSV(data) {
 
     return lines.join("\n");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Local usage history: samples live fetches for the 24h trend chart and the
+// per-window burn-rate chips. Storage itself lives in the plasmoid config as a
+// JSON string (written by main.qml); these helpers are pure so QML and tests
+// can drive them without I/O.
+
+// Two samples closer than this are one observation (also caps config churn)
+var HISTORY_MIN_GAP_MS = 300000;
+
+// 24h of samples at the 5-minute floor gap keeps the config blob tiny
+var HISTORY_MAX_SAMPLES = 288;
+
+// The trend chart covers the newest 24 hours
+var HISTORY_WINDOW_MS = 86400000;
+
+// The slope estimate uses the newest 6 hours inside one reset window
+var HISTORY_PACE_WINDOW_MS = 21600000;
+
+// Meter keys shared by the popup rows and the history samples
+var HISTORY_METERS = ["hourly", "weekly", "monthly"];
+
+// Parses the persisted JSON (or returns a fresh empty store keyed to wsId)
+function historyFromConfig(jsonString, wsId) {
+    try {
+        var parsed = JSON.parse(jsonString || "");
+        if (parsed && parsed.ws === wsId && Object.prototype.toString.call(parsed.samples) === "[object Array]") {
+            return parsed;
+        }
+    } catch (e) {}
+    return { ws: wsId, samples: [] };
+}
+
+// Extracts the micro-cent meter pairs of one parsed payload; null when not live data
+function historyMetersOf(data) {
+    if (!data || data.isMock) return null;
+    var meters = {};
+    for (var i = 0; i < HISTORY_METERS.length; i++) {
+        var key = HISTORY_METERS[i];
+        var bar = data[key] && data[key].length ? data[key][0] : null;
+        if (bar && bar.usedMicroCents !== undefined && bar.limitMicroCents !== undefined) {
+            meters[key] = [Number(bar.usedMicroCents) || 0, Number(bar.limitMicroCents) || 0];
+        }
+    }
+    return Object.keys(meters).length ? meters : null;
+}
+
+// Appends (or refreshes) one sample; returns the updated store, not yet persisted
+function historyAppend(store, wsId, data, nowMs) {
+    var meters = historyMetersOf(data);
+    if (!store || store.ws !== wsId) store = { ws: wsId, samples: [] };
+    if (!meters) return store;
+    var last = store.samples.length ? store.samples[store.samples.length - 1] : null;
+    if (last && nowMs - last.t < HISTORY_MIN_GAP_MS) {
+        last.t = nowMs;
+        last.m = meters;
+        return store;
+    }
+    store.samples.push({ t: nowMs, m: meters });
+    if (store.samples.length > HISTORY_MAX_SAMPLES) {
+        store.samples.splice(0, store.samples.length - HISTORY_MAX_SAMPLES);
+    }
+    return store;
+}
+
+// Percent of one meter pair, or -1 when the meter is absent
+function historyPercent(meters, key) {
+    var pair = meters ? meters[key] : null;
+    if (!pair || !(pair[1] > 0)) return -1;
+    return meterPercent(pair[0], pair[1]);
+}
+
+// Points {t, pct} of one meter inside the newest 24h window
+function historyTrend(store, key, nowMs) {
+    var points = [];
+    if (!store || !store.samples) return points;
+    var cutoff = nowMs - HISTORY_WINDOW_MS;
+    for (var i = 0; i < store.samples.length; i++) {
+        var s = store.samples[i];
+        if (s.t < cutoff) continue;
+        var pct = historyPercent(s.m, key);
+        if (pct >= 0) points.push({ t: s.t, pct: pct });
+    }
+    return points;
+}
+
+// Burn-rate estimate for one meter: slope over the newest samples inside the
+// reset window; null when flat, declining, or too few points
+function historyPace(store, key, resetsSec, nowMs) {
+    if (!(resetsSec > 0)) return null;
+    var points = historyTrend(store, key, nowMs);
+    if (points.length < 2) return null;
+    var windowStart = nowMs - Math.min(HISTORY_PACE_WINDOW_MS, Math.floor(resetsSec) * 1000);
+    var slice = [];
+    for (var i = 0; i < points.length; i++) {
+        if (points[i].t >= windowStart) slice.push(points[i]);
+    }
+    if (slice.length < 2) return null;
+    var first = slice[0];
+    var last = slice[slice.length - 1];
+    var hours = (last.t - first.t) / 3600000;
+    if (hours <= 0) return null;
+    var rate = (last.pct - first.pct) / hours;
+    if (!(rate > 0.01)) return null;
+    var projected = last.pct + rate * (Math.floor(resetsSec) / 3600);
+    return { ratePctPerHour: rate, projectedPct: projected };
+}
+
+// Chip label for a pace estimate, or "" when none
+function historyPaceText(pace) {
+    if (!pace) return "";
+    var projected = Math.max(0, Math.round(pace.projectedPct));
+    return projected >= 100 ? "⚠ ~" + projected + "%" : "↗ ~" + projected + "%";
+}

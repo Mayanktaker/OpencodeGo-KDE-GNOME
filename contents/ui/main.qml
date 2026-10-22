@@ -23,6 +23,8 @@ PlasmoidItem {
     property bool isLoading: false
     property string errorMessage: ""
     property int lastAlertedPercent: 0
+    // Local history store (trend chart + burn-rate chips), persisted in the config
+    property var historyStore: ({ ws: "", samples: [] })
 
     // Compact representation component for panel tray placement
     compactRepresentation: Component {
@@ -38,8 +40,15 @@ PlasmoidItem {
             usagePercent: root.usagePercent
             errorMessage: root.errorMessage
             isLoading: root.isLoading
+            historyStore: root.historyStore
             onRequestRefresh: root.refreshData()
         }
+    }
+
+    // Loads the persisted history for the current workspace (a new id resets the series)
+    function loadHistory() {
+        var wsId = Api.extractWorkspaceId(Plasmoid.configuration.workspaceId || "");
+        historyStore = Api.historyFromConfig(Plasmoid.configuration.usageHistory || "", wsId);
     }
 
     // Function to execute async usage data refresh from OpenCode API
@@ -80,6 +89,18 @@ PlasmoidItem {
                 usageData = data;
                 usagePercent = data.usagePercent || 0;
 
+                // Live figures feed the local trend history; mock data never does,
+                // and collection stops entirely when the privacy switch is off
+                if (!data.isMock && Plasmoid.configuration.enableHistory !== false) {
+                    var wsId = Api.extractWorkspaceId(Plasmoid.configuration.workspaceId || "");
+                    historyStore = Api.historyAppend(historyStore, wsId, data, Date.now());
+                    var nextJson = JSON.stringify(historyStore);
+                    // Persist only when the store actually changed, to spare plasma config churn
+                    if (nextJson !== Plasmoid.configuration.usageHistory) {
+                        Plasmoid.configuration.usageHistory = nextJson;
+                    }
+                }
+
                 // Send native desktop notification when usage threshold is exceeded
                 var notifyEnabled = Plasmoid.configuration.enableNotifications !== false;
                 var threshold = Plasmoid.configuration.notificationThreshold || 80;
@@ -112,6 +133,7 @@ PlasmoidItem {
 
     // Component initialization trigger
     Component.onCompleted: {
+        root.loadHistory();
         root.refreshData();
     }
 
@@ -121,6 +143,7 @@ PlasmoidItem {
 
         // Handler for workspaceId configuration change
         function onWorkspaceIdChanged() {
+            root.loadHistory();
             root.refreshData();
         }
 

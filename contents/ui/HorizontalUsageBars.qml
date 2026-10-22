@@ -14,6 +14,7 @@ Item {
 
     // Usage dataset and scale properties
     property var usageData: null
+    property var historyStore: null
     property bool showIcons: Plasmoid.configuration.showBarIcons || false
     // Toggle for the per-window reset countdown brackets (Rolling/Weekly/Monthly)
     property bool showResetTimes: Plasmoid.configuration.showResetTimes || false
@@ -51,6 +52,19 @@ Item {
         return Api.formatResetFull(usageData.resetSeconds[windowId]);
     }
 
+    // Burn-rate estimate for one window from the local history, or null
+    function paceFor(windowId) {
+        if (Plasmoid.configuration.enableHistory === false) return null;
+        if (!historyStore || !usageData || !usageData.resetSeconds) return null;
+        return Api.historyPace(historyStore, windowId, usageData.resetSeconds[windowId] || 0, Date.now());
+    }
+
+    // Chip color for a pace estimate: preset accent when the limit lands before reset
+    function paceColor(pace) {
+        if (!pace) return horizontalRoot.textColor;
+        return pace.projectedPct >= 100 ? horizontalRoot.accentColor : horizontalRoot.textColor;
+    }
+
     // Column container wrapping the three progress bar rows
     ColumnLayout {
         id: barsColumn
@@ -77,6 +91,7 @@ Item {
                 spacing: Math.round(6 * uiScale)
 
                 property var metrics: horizontalRoot.getIntervalMetrics(modelData.data)
+                property var pace: horizontalRoot.paceFor(modelData.id)
 
                 // Top label row: title on left, percentage on right
                 RowLayout {
@@ -109,6 +124,17 @@ Item {
                         opacity: 0.6
                         color: horizontalRoot.textColor
                         // Let the layout shrink + elide this label instead of pushing the percentage off-card
+                        elide: Text.ElideRight
+                        Layout.minimumWidth: 0
+                    }
+
+                    // Burn-rate chip: projected percent at reset from the local history
+                    PlasmaComponents.Label {
+                        visible: pace !== null
+                        text: pace !== null ? Api.historyPaceText(pace) : ""
+                        font.pixelSize: Math.round(Kirigami.Units.gridUnit * 0.48 * uiScale)
+                        color: pace !== null ? horizontalRoot.paceColor(pace) : horizontalRoot.textColor
+                        opacity: pace !== null && pace.projectedPct >= 100 ? 1.0 : 0.7
                         elide: Text.ElideRight
                         Layout.minimumWidth: 0
                     }

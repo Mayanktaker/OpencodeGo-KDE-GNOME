@@ -380,16 +380,20 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
             : (weeklyBar ? Math.round(Api.calculatePercentage(weeklyBar.value, weeklyBar.maxValue)) : 0);
         const mPct = monthlyBar ? Math.round(Api.calculatePercentage(monthlyBar.value, monthlyBar.maxValue)) : 0;
 
-        const maxPct = Math.max(hPct, wPct, mPct);
+        // Silenced meters drop out of the alert entirely: no banner, no raised watermark
+        const meters = [
+            { name: 'Rolling', pct: hPct, on: this._notifyRolling !== false },
+            { name: 'Weekly', pct: wPct, on: this._notifyWeekly !== false },
+            { name: 'Monthly', pct: mPct, on: this._notifyMonthly !== false },
+        ].filter(m => m.on);
+        if (!meters.length) return;
+
+        const maxPct = Math.max(...meters.map(m => m.pct));
 
         // Alert when any window crosses threshold, or triggers critical level at >=95%
         if (maxPct >= threshold && (this._lastAlertedPercent || 0) < threshold) {
             this._lastAlertedPercent = maxPct;
-            const alerts = [];
-            if (hPct >= threshold) alerts.push(`Rolling: ${hPct}%`);
-            if (wPct >= threshold) alerts.push(`Weekly: ${wPct}%`);
-            if (mPct >= threshold) alerts.push(`Monthly: ${mPct}%`);
-            const detail = alerts.join(', ');
+            const detail = meters.filter(m => m.pct >= threshold).map(m => `${m.name}: ${m.pct}%`).join(', ');
             this._notifyAlert('OpenCode Go Quota Alert', `High usage detected (${detail}). Open the console to top up your limit.`);
         } else if (maxPct >= 95 && (this._lastAlertedPercent || 0) < 95) {
             this._lastAlertedPercent = 95;
@@ -454,6 +458,9 @@ export default class OpenCodeGoExtension extends Extension {
             this._indicator._trayMode = Settings.getTrayDisplayMode(this._settings);
             this._indicator._enableNotifications = Settings.getEnableNotifications(this._settings);
             this._indicator._notifyThreshold = Settings.getNotificationThreshold(this._settings);
+            this._indicator._notifyRolling = Settings.getNotifyRolling(this._settings);
+            this._indicator._notifyWeekly = Settings.getNotifyWeekly(this._settings);
+            this._indicator._notifyMonthly = Settings.getNotifyMonthly(this._settings);
             this._indicator._compactMode = Settings.getCompactMode(this._settings);
             this._indicator._hoverToOpen = Settings.getHoverToOpen(this._settings);
             this._indicator._shortcutAccel = (Settings.getToggleShortcut(this._settings) || [])[0] || '';

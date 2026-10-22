@@ -18,6 +18,9 @@ const KEY_HISTORY = 'enable-history';
 const KEY_TRAY_MODE = 'tray-display-mode';
 const KEY_NOTIFICATIONS = 'enable-notifications';
 const KEY_THRESHOLD = 'notification-threshold';
+const KEY_NOTIFY_ROLLING = 'notify-rolling';
+const KEY_NOTIFY_WEEKLY = 'notify-weekly';
+const KEY_NOTIFY_MONTHLY = 'notify-monthly';
 const KEY_COMPACT_MODE = 'compact-mode';
 const KEY_TOGGLE_SHORTCUT = 'toggle-shortcut';
 const KEY_HOVER_OPEN = 'hover-to-open';
@@ -69,6 +72,10 @@ export function getTrayDisplayMode(settings) { return settings.get_string(KEY_TR
 export function getEnableNotifications(settings) { return settings.get_boolean(KEY_NOTIFICATIONS); }
 // Usage percentage threshold triggering a notification
 export function getNotificationThreshold(settings) { return settings.get_uint(KEY_THRESHOLD); }
+// Per-meter alert toggles: a silenced window never fires (or raises) the quota alert
+export function getNotifyRolling(settings) { return settings.get_boolean(KEY_NOTIFY_ROLLING); }
+export function getNotifyWeekly(settings) { return settings.get_boolean(KEY_NOTIFY_WEEKLY); }
+export function getNotifyMonthly(settings) { return settings.get_boolean(KEY_NOTIFY_MONTHLY); }
 // Whether compact view is enabled in the popup
 export function getCompactMode(settings) { return settings.get_boolean(KEY_COMPACT_MODE); }
 // Keyboard shortcut array to toggle popup menu
@@ -94,8 +101,11 @@ export const WATCHED_KEYS = [
     KEY_TRAY_MODE,
     KEY_NOTIFICATIONS,
     KEY_THRESHOLD,
+    KEY_NOTIFY_ROLLING,
+    KEY_NOTIFY_WEEKLY,
+    KEY_NOTIFY_MONTHLY,
     KEY_COMPACT_MODE,
     KEY_TOGGLE_SHORTCUT,
     KEY_HOVER_OPEN
 ];
-export { KEY_WORKSPACE, KEY_COOKIE, KEY_REFRESH, KEY_PANEL_BADGE, KEY_WARN_PERCENT, KEY_CRITICAL_PERCENT, KEY_HISTORY, KEY_TRAY_MODE, KEY_NOTIFICATIONS, KEY_THRESHOLD, KEY_COMPACT_MODE, KEY_TOGGLE_SHORTCUT, KEY_HOVER_OPEN };
+export { KEY_WORKSPACE, KEY_COOKIE, KEY_REFRESH, KEY_PANEL_BADGE, KEY_WARN_PERCENT, KEY_CRITICAL_PERCENT, KEY_HISTORY, KEY_TRAY_MODE, KEY_NOTIFICATIONS, KEY_THRESHOLD, KEY_NOTIFY_ROLLING, KEY_NOTIFY_WEEKLY, KEY_NOTIFY_MONTHLY, KEY_COMPACT_MODE, KEY_TOGGLE_SHORTCUT, KEY_HOVER_OPEN };

@@ -1,6 +1,14 @@
 <!-- © Mayanktaker Computers & Web Development | https://mayanktaker.com -->
 # Changelog — OpenCode Go Usage Tracker
 
+## v2.10.0
+
+**What's new**
+- **The trend chart and pace estimates now live on KDE Plasma too.** The KDE widget's popup shows the same 24-hour usage trend and per-window pace hints as the GNOME extension, so both desktops read identically at a glance.
+- **Pick which windows can interrupt you.** On GNOME, quota alerts can now be silenced per window — keep Monthly warnings but mute the noisy Rolling one, or any combination you prefer.
+- **Your privacy switch, everywhere.** The KDE widget gained the same on/off control for keeping local usage history that GNOME has; turning it off stops collection and hides the chart and pace hints on both desktops.
+- **The trend chart follows your theme.** On KDE, the chart's lines use your chosen color preset and refresh instantly when you change themes or alert levels.
+
 ## v2.9.0
 
 **What's new**

@@ -43,6 +43,9 @@ A unified Linux desktop companion and command-line utility for tracking your **O
 - 📊 **Real-Time Usage Tracking**: Fetches live data from the OpenCode Console JSON API `opencode.ai/console/api/go/status` via `curl`. Supports route-walk resilience, transient 5xx retry handling, and graceful stale-figures fallback.
 - ⏱️ **Per-Window Reset Countdowns**: Natural-language `(resets in 3 hours 45 minutes)` countdowns for Rolling (5h), Weekly, and Monthly windows.
 - 📐 **Horizontal Progress Bars**: Smooth rounded progress bars with responsive color accents (sky, cyan, teal) and automatic warning shifts (≥75% orange, ≥90% red).
+- 📈 **24-Hour Usage Trend Chart (KDE & GNOME)**: A trend sparkline under the bars with a dashed alert-level guide line, fed by local history samples you can switch off from settings.
+- 🚀 **Burn-Rate Pace Estimates (KDE & GNOME)**: Every window shows where it lands at reset — `↗ ~84%` when you're on pace, `⚠ ~112%` when the limit arrives first.
+- 🔕 **Per-Window Alerts (GNOME)**: Silence quota notifications for Rolling, Weekly, or Monthly individually, keeping only the windows you care about.
 - 🏷️ **Dynamic Panel Tray Badge**: Real-time headline usage percentage badge directly in your desktop top bar or taskbar.
 - 🎨 **12 Developer Theme Presets (KDE)**: Catppuccin Mocha (default), Breeze Dark, Nord, Dracula, Solarized, Gruvbox, Tokyo Night, One Dark, plus 4 light themes with full color pickers.
 - 💻 **Global CLI Utility (`opencode-usage`)**: Terminal client with formatted tables, JSON mode (`--json`), CSV export (`--export`), and interactive setup wizard (`--interactive` / `-i`).

@@ -34,10 +34,22 @@
             <!-- Toggle audible sound chime on quota threshold notification -->
             <default>false</default>
         </entry>
+        <entry name="usageHistory" type="String">
+            <!-- JSON sample store for the 24h trend chart and burn-rate chips (per workspace) -->
+            <default></default>
+        </entry>
+        <entry name="enableHistory" type="Bool">
+            <!-- Toggle collecting local usage history (trend chart and pace chips) -->
+            <default>true</default>
+        </entry>
     </group>
 
     <!-- Appearance settings group for themes, layouts, borders, and headers -->
     <group name="Appearance">
+        <entry name="showTrend" type="Bool">
+            <!-- Toggle the 24-hour usage trend chart under the progress bars -->
+            <default>true</default>
+        </entry>
         <entry name="displayLayout" type="String">
             <!-- Layout mode: "tabbed" (Tab switcher), "all_in_one" (All 3 charts), or "horizontal" (Progress rows) -->
             <default>tabbed</default>

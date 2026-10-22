@@ -50,6 +50,7 @@ Item {
     property alias cfg_refreshInterval: refreshIntervalField.value
     property alias cfg_enableNotifications: enableNotifyCheckBox.checked
     property alias cfg_enableSound: enableSoundCheckBox.checked
+    property alias cfg_enableHistory: enableHistoryCheckBox.checked
     property alias cfg_notificationThreshold: thresholdSpinBox.value
     property alias cfg_showBarIcons: showBarIconsCheckBox.checked
 
@@ -156,6 +157,13 @@ Item {
             Kirigami.FormData.label: i18n("Notification Sound:")
             visible: enableNotifyCheckBox.checked
             text: i18n("Play audible notification chime when quota alert triggers")
+        }
+
+        // Local usage history collection toggle (trend chart + burn-rate chips)
+        QQC2.CheckBox {
+            id: enableHistoryCheckBox
+            Kirigami.FormData.label: i18n("Usage Trend History:")
+            text: i18n("Keep local usage samples for the 24h trend chart and pace estimates")
         }
 
         // Quota alert percentage threshold spinbox

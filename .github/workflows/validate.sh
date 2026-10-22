@@ -7,6 +7,9 @@ set -euo pipefail
 echo "Checking api.js syntax..."
 node --check contents/code/api.js
 
+echo "Running KDE api checks..."
+node tools/kde-api-test.mjs
+
 echo "Checking version sync..."
 bash tools/version.sh check
 

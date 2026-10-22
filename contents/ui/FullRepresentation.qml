@@ -23,6 +23,7 @@ Rectangle {
     property int usagePercent: 0
     property string errorMessage: ""
     property bool isLoading: false
+    property var historyStore: null
     signal requestRefresh()
 
     // Public scale factor and theme colors
@@ -125,6 +126,18 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: false
             Layout.preferredHeight: horizontalBars.implicitHeight
+            usageData: fullRoot.usageData
+            historyStore: fullRoot.historyStore
+            uiScale: fullRoot.uiScale
+        }
+
+        // 24-hour trend chart fed by the local history samples
+        UsageTrendChart {
+            id: trendChart
+            Layout.fillWidth: true
+            Layout.fillHeight: false
+            Layout.preferredHeight: trendChart.implicitHeight
+            historyStore: fullRoot.historyStore
             usageData: fullRoot.usageData
             uiScale: fullRoot.uiScale
         }

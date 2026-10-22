@@ -55,8 +55,11 @@ if (settings) {
     eq(Settings.getWarnPercent({ get_uint: () => 75 }), 75, 'warn percent accessor');
     eq(Settings.getCriticalPercent({ get_uint: () => 90 }), 90, 'critical percent accessor');
     eq(Settings.getHistoryEnabled({ get_boolean: () => true }), true, 'history accessor');
+    eq(Settings.getNotifyRolling({ get_boolean: () => false }), false, 'notify rolling accessor');
+    eq(Settings.getNotifyWeekly({ get_boolean: () => true }), true, 'notify weekly accessor');
+    eq(Settings.getNotifyMonthly({ get_boolean: () => true }), true, 'notify monthly accessor');
     eq(Settings.getToggleShortcut({ get_strv: () => ['<Super><Alt>o'] })[0], '<Super><Alt>o', 'toggle shortcut accessor');
-    eq(Settings.WATCHED_KEYS.join(','), 'workspace-id,auth-cookie,refresh-minutes,show-panel-badge,warn-percent,critical-percent,enable-history,tray-display-mode,enable-notifications,notification-threshold,compact-mode,toggle-shortcut,hover-to-open', 'watched keys cover every setting');
+    eq(Settings.WATCHED_KEYS.join(','), 'workspace-id,auth-cookie,refresh-minutes,show-panel-badge,warn-percent,critical-percent,enable-history,tray-display-mode,enable-notifications,notification-threshold,notify-rolling,notify-weekly,notify-monthly,compact-mode,toggle-shortcut,hover-to-open', 'watched keys cover every setting');
     // disconnect must not throw when there is nothing connected
     Settings.connectChanged({ connect: () => 1, disconnect: () => {} }, ['workspace-id'], () => {})();
     ok(true, 'connectChanged returns a working unsubscribe');

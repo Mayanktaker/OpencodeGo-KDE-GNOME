@@ -21,6 +21,7 @@ Item {
     property alias cfg_showBorder: showBorderCheckBox.checked
     property alias cfg_showBarIcons: showBarIconsCheckBox.checked
     property alias cfg_showResetTimes: showResetTimesCheckBox.checked
+    property alias cfg_showTrend: showTrendCheckBox.checked
     property alias cfg_activePreset: activePresetField.text
     property alias cfg_backgroundColor: bgColorField.text
     property alias cfg_headerBackgroundColor: headerBgColorField.text
@@ -186,6 +187,13 @@ Item {
             id: showResetTimesCheckBox
             Kirigami.FormData.label: i18n("Reset Countdown:")
             text: i18n("Show 'reset in X' countdown next to each usage window")
+        }
+
+        // 24-hour trend chart toggle checkbox
+        QQC2.CheckBox {
+            id: showTrendCheckBox
+            Kirigami.FormData.label: i18n("Usage Trend:")
+            text: i18n("Show the 24-hour trend chart under the usage bars")
         }
 
         // Theme preset combo box selector with 12 dark & light developer palettes
