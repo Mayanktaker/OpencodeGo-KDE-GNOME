@@ -2,15 +2,17 @@
 # © Mayanktaker Computers & Web Development | https://mayanktaker.com
 # Stub console API for transport tests. The mode is read from a file on every
 # request, so a scenario can change the server's behaviour without a restart.
-#
+#   ./stub-server.py PORT MODE_FILE HITS_FILE
 #   good    -> HTTP 200 with a realistic go/status payload
 #   flap    -> one good response, then 500 forever (transient outage)
+#   slow    -> one good response after a fixed delay (keeps the resume snapshot visible)
 #   500     -> HTTP 500 on every request
 #   404     -> HTTP 404 on every request (route moved)
 #   401     -> HTTP 401 {"_tag":"Unauthorized"} (dead session)
 import http.server
 import json
 import sys
+import time
 
 MODE_FILE = sys.argv[2] if len(sys.argv) > 2 else "/tmp/opencodego-stub.mode"
 HITS_FILE = sys.argv[3] if len(sys.argv) > 3 else "/tmp/opencodego-stub.hits"
@@ -38,6 +40,7 @@ STATUS_FOR_MODE = {
     "401": 401,
     "good": 200,
     "flap": 200,
+    "slow": 200,
 }
 BODY_FOR_MODE = {
     "500": b'{"_tag":"InternalServerError"}',
@@ -55,16 +58,22 @@ def current_mode():
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
+    # Seconds of artificial latency for the "slow" mode
+    SLOW_DELAY_SEC = 8
+
     def do_GET(self):
         mode = current_mode()
         # "flap" serves one good payload and then turns into a 5xx storm
         if mode == "flap":
             with open(HITS_FILE) as handle:
-                served = sum(1 for line in handle if line.startswith("flap "))
+                served = sum(1 for line in handle if " flap " in line)
             mode = "good" if served <= 1 else "500"
+        # "slow" holds the connection open so the pre-fetch resume state is observable
+        if mode == "slow":
+            time.sleep(self.SLOW_DELAY_SEC)
 
         with open(HITS_FILE, "a") as handle:
-            handle.write(f"{current_mode()} {self.path}\n")
+            handle.write(f"{time.time():.1f} {current_mode()} {self.path}\n")
 
         status = STATUS_FOR_MODE.get(mode, 200)
         body = BODY_FOR_MODE.get(mode, GOOD_BODY)
@@ -79,4 +88,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    http.server.HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    # Threaded so a delayed "slow" response never blocks unrelated concurrent
+    # requests (the rig shell, prefs Test Connection) behind one connection
+    http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

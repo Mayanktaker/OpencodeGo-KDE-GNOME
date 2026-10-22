@@ -12,6 +12,9 @@ const KEY_WORKSPACE = 'workspace-id';
 const KEY_COOKIE = 'auth-cookie';
 const KEY_REFRESH = 'refresh-minutes';
 const KEY_PANEL_BADGE = 'show-panel-badge';
+const KEY_WARN_PERCENT = 'warn-percent';
+const KEY_CRITICAL_PERCENT = 'critical-percent';
+const KEY_HISTORY = 'enable-history';
 const KEY_TRAY_MODE = 'tray-display-mode';
 const KEY_NOTIFICATIONS = 'enable-notifications';
 const KEY_THRESHOLD = 'notification-threshold';
@@ -54,6 +57,12 @@ export function getRefreshSeconds(settings) {
 }
 // Whether the panel shows the headline percentage next to the icon
 export function getShowPanelBadge(settings) { return settings.get_boolean(KEY_PANEL_BADGE); }
+// Percentage where bars and the badge turn amber
+export function getWarnPercent(settings) { return settings.get_uint(KEY_WARN_PERCENT); }
+// Percentage where bars and the badge turn red
+export function getCriticalPercent(settings) { return settings.get_uint(KEY_CRITICAL_PERCENT); }
+// Whether local usage history (sparkline, pace, resume snapshot) is collected
+export function getHistoryEnabled(settings) { return settings.get_boolean(KEY_HISTORY); }
 // Which quota window to display in the panel (weekly, fiveHour, monthly, all, none)
 export function getTrayDisplayMode(settings) { return settings.get_string(KEY_TRAY_MODE) || 'weekly'; }
 // Whether desktop notifications are enabled
@@ -79,6 +88,9 @@ export const WATCHED_KEYS = [
     KEY_COOKIE,
     KEY_REFRESH,
     KEY_PANEL_BADGE,
+    KEY_WARN_PERCENT,
+    KEY_CRITICAL_PERCENT,
+    KEY_HISTORY,
     KEY_TRAY_MODE,
     KEY_NOTIFICATIONS,
     KEY_THRESHOLD,
@@ -86,4 +98,4 @@ export const WATCHED_KEYS = [
     KEY_TOGGLE_SHORTCUT,
     KEY_HOVER_OPEN
 ];
-export { KEY_WORKSPACE, KEY_COOKIE, KEY_REFRESH, KEY_PANEL_BADGE, KEY_TRAY_MODE, KEY_NOTIFICATIONS, KEY_THRESHOLD, KEY_COMPACT_MODE, KEY_TOGGLE_SHORTCUT, KEY_HOVER_OPEN };
+export { KEY_WORKSPACE, KEY_COOKIE, KEY_REFRESH, KEY_PANEL_BADGE, KEY_WARN_PERCENT, KEY_CRITICAL_PERCENT, KEY_HISTORY, KEY_TRAY_MODE, KEY_NOTIFICATIONS, KEY_THRESHOLD, KEY_COMPACT_MODE, KEY_TOGGLE_SHORTCUT, KEY_HOVER_OPEN };

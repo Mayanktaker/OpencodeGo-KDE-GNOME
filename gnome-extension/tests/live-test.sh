@@ -49,6 +49,9 @@ up() {
     # A private bus keeps the rig off the live desktop's session entirely
     dbus-daemon --session --print-address=3 --fork 3> "$RIG_DIR/bus.addr"
     export DBUS_SESSION_BUS_ADDRESS="$(cat "$RIG_DIR/bus.addr")"
+    # The rig also gets its own scratch cache: real history samples from the
+    # desktop must not leak into scenarios, and scenarios must not write to home
+    export OPENCODEGO_CACHE_DIR="$RIG_DIR/cache"
     MUTTER_DEBUG_DUMMY_MODE_SPECS="$VIRTUAL_MONITOR" nohup \
         gnome-shell --headless --virtual-monitor="$VIRTUAL_MONITOR" > "$RIG_DIR/shell.log" 2>&1 &
     echo $! > "$RIG_DIR/shell.pid"

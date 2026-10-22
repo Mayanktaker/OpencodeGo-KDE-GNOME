@@ -17,6 +17,10 @@ const REFRESH_MAX = 60;
 const NOTIFY_THRESHOLD_MIN = 50;
 const NOTIFY_THRESHOLD_MAX = 95;
 
+// Bounds for the warning/critical alert level spin rows
+const ALERT_LEVEL_MIN = 0;
+const ALERT_LEVEL_MAX = 100;
+
 // Colours for the connection test result
 const RESULT_OK_COLOR = '#26a269';
 const RESULT_ERROR_COLOR = '#ff5555';
@@ -150,6 +154,29 @@ export default class OpenCodeGoPrefs {
         settings.bind('show-panel-badge', badgeRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behaviour.add(badgeRow);
 
+        // Alert colour levels feeding the badge, bar colours and the threshold tick
+        const warnRow = new Adw.SpinRow({
+            title: 'Warning level (%)',
+            subtitle: 'Bars, the threshold tick and the panel badge turn amber above this level',
+            adjustment: new Gtk.Adjustment({
+                lower: ALERT_LEVEL_MIN, upper: ALERT_LEVEL_MAX, step_increment: 1,
+                value: settings.get_uint('warn-percent'),
+            }),
+        });
+        settings.bind('warn-percent', warnRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        behaviour.add(warnRow);
+
+        const criticalRow = new Adw.SpinRow({
+            title: 'Critical level (%)',
+            subtitle: 'Percentages above this level turn red; keep it above the warning level',
+            adjustment: new Gtk.Adjustment({
+                lower: ALERT_LEVEL_MIN, upper: ALERT_LEVEL_MAX, step_increment: 1,
+                value: settings.get_uint('critical-percent'),
+            }),
+        });
+        settings.bind('critical-percent', criticalRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        behaviour.add(criticalRow);
+
         // Tray icon display mode selector
         const trayModes = [
             { id: 'weekly', name: 'Weekly Limit (Default)' },
@@ -253,6 +280,14 @@ export default class OpenCodeGoPrefs {
         });
         storageRow.add_prefix(new Gtk.Image({ icon_name: 'dialog-password-symbolic' }));
         privacyGroup.add(storageRow);
+
+        // Optional local trend history, stored as percentages in ~/.cache
+        const historyRow = new Adw.SwitchRow({
+            title: 'Keep usage trend history',
+            subtitle: 'Stores the last 7 days of usage percentages on this device to draw the trend sparkline and pace estimate. Turn off to keep no history at all.',
+        });
+        settings.bind('enable-history', historyRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        privacyGroup.add(historyRow);
 
         const clearRow = new Adw.ActionRow({
             title: 'Clear Stored Credentials',

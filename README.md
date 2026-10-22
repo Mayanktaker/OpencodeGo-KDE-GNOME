@@ -26,6 +26,12 @@ A unified Linux desktop companion and command-line utility for tracking your **O
   - Full-color glowing brand header in popup card (`opencodego-brand.svg`).
   - Redesigned usage card: live status pill (`LIVE` / `DEMO MODE` / `STALE` / `AUTH ERROR`), timestamp + weekly summary, and round **Refresh** / **Open Console** / **Settings** buttons in the header.
   - Animated horizontal-gradient progress bars with an alert-threshold marker, plus `$used / $limit ($left)` and a compact `↻ 4h 35m` reset badge under every bar.
+  - **24-hour usage trend sparkline** under the bars, with faint guide lines at your warning and critical levels, so you can see how fast you're climbing at a glance.
+  - **Burn-rate estimate** on every window — `↗ ~84% by reset` when you're on pace, or `⚠ hits ~112%` when the limit will be crossed before the window resets.
+  - **Figures survive a restart** — after a reboot or logout the card instantly restores your last known numbers (clearly marked as stale) instead of starting empty.
+  - **Your own alert levels** — pick the percentage where bars and the panel badge turn amber and red, instead of living with fixed defaults.
+  - **Actionable quota alerts** — the desktop notification carries an *Open Console* button, so topping up takes one click from the banner itself.
+  - **Private by design** — the optional trend history stays in your own cache folder and can be switched off entirely from the Privacy tab.
   - **Copy Summary** button that puts your Rolling, Weekly, and Monthly figures on the clipboard.
   - Instant in-popup **Refresh** button that updates figures live without dismissing the menu.
   - Global keyboard shortcut (`<Super><Alt>o`) to toggle the popup instantly from anywhere, and a middle-click that refreshes on the spot.

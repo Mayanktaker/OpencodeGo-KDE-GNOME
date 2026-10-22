@@ -29,6 +29,7 @@ cp "${SCRIPT_DIR}/prefs.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/popup.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/settings.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/api.js" "${BUILD_DIR}/package/"
+cp "${SCRIPT_DIR}/history.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/version.js" "${BUILD_DIR}/package/"
 cp "${SCRIPT_DIR}/stylesheet.css" "${BUILD_DIR}/package/"
 

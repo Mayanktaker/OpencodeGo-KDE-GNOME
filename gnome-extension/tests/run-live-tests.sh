@@ -117,6 +117,13 @@ wait_for_status() {
 }
 
 start_stub() {
+    # A stray stub from an interrupted run keeps port 8899 and silently serves
+    # stale code to this run (the fresh one dies on EADDRINUSE unnoticed),
+    # so clear the port before binding it
+    for pid in $(pgrep -f "python3 .*stub-server\.py 8899" 2>/dev/null); do
+        kill "$pid" 2>/dev/null
+    done
+    sleep 1
     printf '500\n' > "$STUB_MODE"
     nohup python3 "$HERE/stub-server.py" 8899 "$STUB_MODE" "$STUB_HITS" > /dev/null 2>&1 &
     STUB_PID=$!
@@ -127,6 +134,8 @@ cleanup() {
     "$RIG" down > /dev/null 2>&1
     [ -n "$STUB_PID" ] && kill "$STUB_PID" 2>/dev/null
     rm -f "$STUB_MODE" "$STUB_HITS"
+    # Leave no history behind either: the next run starts disk-clean
+    rm -rf "${RIG_DIR:-${TMPDIR:-/tmp}/opencodego-rig}/cache"
     # Clear this run's values, then hand the developer's own settings back
     gsettings --schemadir "$INSTALL_DIR/schemas" reset-recursively "$SCHEMA" > /dev/null 2>&1
     [ -s "$SETTINGS_BACKUP" ] && dconf load "$DCONF_PATH" < "$SETTINGS_BACKUP" > /dev/null 2>&1
@@ -156,6 +165,9 @@ printf '══ GNOME extension live tests (headless shell rig)\n'
 # Clear any rig left behind by an interrupted run before touching settings, so a
 # stale shell cannot overwrite this run's gsettings
 "$RIG" down > /dev/null 2>&1
+# A leftover history file would let early scenarios boot from a restored
+# snapshot and change their error semantics; every run starts disk-clean
+rm -rf "${RIG_DIR:-${TMPDIR:-/tmp}/opencodego-rig}/cache"
 install_pristine > /dev/null 2>&1
 # The rig shares the desktop's dconf database: snapshot the developer's extension
 # settings up front so cleanup restores them instead of leaving test values behind
@@ -260,6 +272,56 @@ F_ROWS=$(field "$FIRST" menuRows); L_ROWS=$(field "$LAST" menuRows)
 [ -n "$F_ROWS" ] && [ "${L_ROWS:-0}" -eq "$((F_ROWS + 1))" ] \
     && ok "popup stable across refreshes ($F_ROWS rows + transient banner)" \
     || no "popup did not grow across refreshes" "$F_ROWS -> $L_ROWS"
+
+# ------------------------------- a restart restores the session's last figures
+section "resume snapshot, 24h trend and local history"
+RIG_CACHE="${RIG_DIR:-${TMPDIR:-/tmp}/opencodego-rig}/cache"
+rm -rf "$RIG_CACHE"
+mkdir -p "$RIG_CACHE"
+NOW_MS=$(date +%s%3N)
+python3 - "$RIG_CACHE/history.json" "$STUB_WS" "$NOW_MS" <<'PY'
+import json, sys
+path, ws, now = sys.argv[1], sys.argv[2], int(sys.argv[3])
+# Four rising weekly/monthly samples over the last ~2h look like a real session;
+# the live poll later appends a fifth sample with the stub's own values
+samples = []
+for minutes, used in ((120, 700_000_000), (90, 800_000_000), (60, 900_000_000), (10, 1_100_000_000)):
+    samples.append({"t": now - minutes * 60_000, "m": {
+        "weekly": [used, 2_000_000_000],
+        "monthly": [used * 4, 20_000_000_000],
+    }})
+with open(path, "w") as handle:
+    json.dump({"version": 1, "ws": ws, "samples": samples}, handle)
+PY
+use_stub_credentials 1
+stub_mode slow
+boot_patched slow
+P_RESUME=$(probe enable)
+has "boots with the restored-figures banner" "restored from the last session" "$P_RESUME"
+has "resume state carries the STALE chip" "STALE" "$P_RESUME"
+hasnt "live chip absent before the slow poll answers" "LIVE" "$P_RESUME"
+has "resume percent comes from disk, not the stub" '"percent":55' "$P_RESUME"
+has "trend sparkline section renders" "Usage trend — last 24h" "$P_RESUME"
+wait_for_status ok 60
+P_OK=$(probe_last_tick)
+has "slow poll lands on live figures" '"status":"ok"' "$P_OK"
+has "trend legend now tracks the live point" "Weekly 24%" "$P_OK"
+HISTSAMPLES=$(python3 - "$RIG_CACHE/history.json" <<'PY'
+import json, sys
+with open(sys.argv[1]) as handle:
+    print(len(json.load(handle).get("samples", [])))
+PY
+)
+[ "$HISTSAMPLES" = "5" ] \
+    && ok "live poll appended sample 5/5 to local history ($HISTSAMPLES)" \
+    || no "live poll appended to local history" "want 5 samples, got ${HISTSAMPLES:-none}"
+HISTWS=$(python3 - "$RIG_CACHE/history.json" <<'PY'
+import json, sys
+with open(sys.argv[1]) as handle:
+    print(json.load(handle).get("ws"))
+PY
+)
+has "history file keyed to the workspace" "$STUB_WS" "$HISTWS"
 
 # ------------------------------------------------------------ prefs window
 section "preferences window and Test Connection"

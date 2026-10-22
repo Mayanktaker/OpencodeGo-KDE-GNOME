@@ -234,6 +234,14 @@
     spacing: 8px;
 }
 
+/* Burn-rate chip "% used / $limit ($left)" pane — projected percent before reset */
+.opencodego-pace-label {
+    font-size: 0.78em;
+    font-feature-settings: "tnum";
+    margin: 0;
+    padding: 0;
+}
+
 /* "$used / $limit ($left)" on left of meta row */
 .opencodego-remaining-label {
     font-size: 0.78em;
@@ -248,6 +256,33 @@
     opacity: 0.65;
     margin: 0;
     padding: 0;
+}
+
+/* Trend sparkline section between the usage rows and the footer */
+.opencodego-trend-box {
+    min-width: 312px;
+    padding: 4px 6px 2px 6px;
+    margin-top: 2px;
+    spacing: 3px;
+}
+
+.opencodego-trend-title {
+    font-size: 0.72em;
+    font-weight: 600;
+    opacity: 0.6;
+}
+
+.opencodego-trend-canvas {
+    min-width: 300px;
+    border-radius: 6px;
+    background-color: rgba(128, 128, 140, 0.07);
+    padding: 2px;
+}
+
+.opencodego-trend-legend {
+    font-size: 0.72em;
+    font-feature-settings: "tnum";
+    opacity: 0.68;
 }
 
 /* Transient status callout box */

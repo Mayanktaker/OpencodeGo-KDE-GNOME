@@ -1,6 +1,16 @@
 <!-- © Mayanktaker Computers & Web Development | https://mayanktaker.com -->
 # Changelog — OpenCode Go Usage Tracker
 
+## v2.9.0
+
+**What's new**
+- **See where you're heading, not just where you are.** The popup now includes a 24-hour usage trend chart beneath the bars, with faint guide lines at your warning and critical levels — one glance shows how fast each window is climbing.
+- **Know before you hit the wall.** Every window carries a pace estimate: a calm "on pace for ~84% by reset", or a clear warning like "hits ~112%" when the limit will be crossed before the window resets.
+- **Your numbers survive a restart.** After a reboot or logout the card instantly restores your last known figures — clearly marked as stale until the fresh data lands — instead of starting out empty.
+- **Alert levels that fit you.** Choose the percentage where bars and the panel badge turn amber and red, instead of fixed defaults, from the new Panel & Appearance settings.
+- **Quota alerts that do something.** The desktop notification now has an Open Console button, so you can jump straight to topping up without hunting for the panel icon.
+- **History you control.** The trend data lives only in your own cache folder, and a new privacy switch turns it off completely if you'd rather not keep any.
+
 ## v2.8.2
 
 **What's new**

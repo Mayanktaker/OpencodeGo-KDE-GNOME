@@ -10,11 +10,13 @@ import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import * as Api from './api.js';
 import * as Settings from './settings.js';
 import * as Popup from './popup.js';
+import * as History from './history.js';
 
 // Decodes GLib's waitpid-encoded spawn status to the child exit code (gjs lacks the WEXITSTATUS macro)
 const exitCodeOf = status => (status & 0xff00) >> 8;
@@ -28,9 +30,7 @@ const FALLBACK_ICON_NAME = 'applications-system-symbolic';
 // Console root; the workspace Go page is appended when a workspace id is known
 const CONSOLE_URL_BASE = 'https://opencode.ai/console';
 
-// Panel badge thresholds and colours, mirroring the KDE widget's panel badge
-const BADGE_WARN_PERCENT = 75;
-const BADGE_CRITICAL_PERCENT = 90;
+// Panel badge alert colors, mirroring the KDE widget's panel badge; thresholds come from settings
 const BADGE_WARN_COLOR = '#ffb86c';
 const BADGE_CRITICAL_COLOR = '#ff5555';
 
@@ -57,9 +57,9 @@ function createPanelIcon(extensionPath) {
 }
 
 // Colour for a panel badge percentage, or null to keep the theme foreground
-function badgeColorFor(percent) {
-    if (percent >= BADGE_CRITICAL_PERCENT) return BADGE_CRITICAL_COLOR;
-    if (percent >= BADGE_WARN_PERCENT) return BADGE_WARN_COLOR;
+function badgeColorFor(percent, warnPercent, criticalPercent) {
+    if (percent >= criticalPercent) return BADGE_CRITICAL_COLOR;
+    if (percent >= warnPercent) return BADGE_WARN_COLOR;
     return null;
 }
 
@@ -100,6 +100,9 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         // Fetch state machine shared with popup.js
         this._state = { status: 'demo', data: null, error: null };
         this._lastAlertedPercent = 0;
+        // Local history store, loaded per workspace in loadHistory() after settings bind
+        this._historyStore = null;
+        this._enableHistory = true;
 
         // Hover opens the popup after a brief intent delay when enabled in settings
         this.connect('enter-event', () => {
@@ -150,7 +153,7 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         this.menu.connect('open-state-changed', (_menu, isOpen) => {
             if (isOpen) {
                 const popupMod = this._popupModule || Popup;
-                popupMod.buildMenuContent(this.menu, this._state, this._actions, this._compactMode, this._notifyThreshold, this._shortcutAccel);
+                popupMod.buildMenuContent(this.menu, this._state, this._actions, this._compactMode, this._uiConfig(), this._shortcutAccel);
             }
         });
 
@@ -181,20 +184,22 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
 
         let text = '';
         let headlineColor = null;
+        const warnPercent = this._warnPercent || 75;
+        const criticalPercent = this._criticalPercent || 90;
 
         if (mode === 'all') {
             text = `5h ${hPct}% · W ${wPct}% · M ${mPct}%`;
-            headlineColor = badgeColorFor(Math.max(hPct, wPct, mPct));
+            headlineColor = badgeColorFor(Math.max(hPct, wPct, mPct), warnPercent, criticalPercent);
         } else if (mode === 'fiveHour') {
             text = `${hPct}%`;
-            headlineColor = badgeColorFor(hPct);
+            headlineColor = badgeColorFor(hPct, warnPercent, criticalPercent);
         } else if (mode === 'monthly') {
             text = `${mPct}%`;
-            headlineColor = badgeColorFor(mPct);
+            headlineColor = badgeColorFor(mPct, warnPercent, criticalPercent);
         } else {
             // Default: weekly headline percentage
             text = `${wPct}%`;
-            headlineColor = badgeColorFor(wPct);
+            headlineColor = badgeColorFor(wPct, warnPercent, criticalPercent);
         }
 
         this._badge.visible = true;
@@ -202,12 +207,49 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
         this._badge.style = headlineColor ? `color: ${headlineColor};` : '';
     }
 
-    // Rebuilds popup content from state
+    // Enriches a non-mock state with the cached trend and pace views from local history
+    _deriveViews(state) {
+        if (!this._enableHistory) return { history: null, pace: null };
+        const view = History.trendView(this._historyStore);
+        const pace = History.paceView(this._historyStore, (state.data && state.data.resetSeconds) || {});
+        return { history: { view }, pace };
+    }
+
+    // Rebuilds popup content from state, adding history/pace projections to genuine live data
     _setState(state) {
-        this._state = state;
+        let enriched = state;
+        if (state.data && !state.data.isMock) {
+            enriched = { ...state, ...this._deriveViews(state) };
+        }
+        this._state = enriched;
         this._updateBadge();
         const popupMod = this._popupModule || Popup;
-        popupMod.buildMenuContent(this.menu, state, this._actions, this._compactMode, this._notifyThreshold, this._shortcutAccel);
+        popupMod.buildMenuContent(this.menu, enriched, this._actions, this._compactMode, this._uiConfig(), this._shortcutAccel);
+    }
+
+    // Aggregated color/threshold configuration passed to the popup painter
+    _uiConfig() {
+        return {
+            notify: this._notifyThreshold || 80,
+            warn: this._warnPercent || 75,
+            critical: this._criticalPercent || 90,
+        };
+    }
+
+    // Reads local history (per workspace) and, when present, boots the card with
+    // last-session figures under the STALE chip so the popup is never empty after a restart
+    loadHistory() {
+        const ws = Api.extractWorkspaceId(this._workspaceId);
+        this._historyStore = History.load(ws);
+        if (!this._enableHistory) return;
+        const snapshot = History.snapshotData(this._historyStore);
+        if (snapshot) this._setState({ status: 'resumed', data: snapshot, error: null });
+    }
+
+    // Reloads only the store after credential/workspace changes so samples key to the new
+    // workspace without resurrecting the resume banner over a live view
+    reloadHistory() {
+        this._historyStore = History.load(Api.extractWorkspaceId(this._workspaceId));
     }
 
     // Runs one curl request honoring the route-walk and retry rules from api.js
@@ -297,14 +339,34 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
     // Applies a terminal state, releases the in-flight slot and arms the next poll
     _finish(state) {
         this._inFlight = false;
+        // Only genuine live data feeds the history file; mock figures never touch the disk
+        if (this._enableHistory && state.status === 'ok' && state.data && !state.data.isMock) {
+            const ws = Api.extractWorkspaceId(this._workspaceId);
+            this._historyStore = History.append(this._historyStore, ws, state.data);
+            History.save(this._historyStore);
+        }
         this._setState(state);
         this._scheduleNext();
         this._checkNotification(state);
     }
 
+    // Alerts with a desktop notification; replaces the plain Main.notify banner when
+    // MessageTray exposes the system source so "Open Console" closes the loop on the spot
+    _notifyAlert(title, body) {
+        const onOpen = this._actions && this._actions.onOpenConsole ? () => this._actions.onOpenConsole() : null;
+        try {
+            const source = MessageTray.getSystemSource();
+            const banner = new MessageTray.Notification({ source, title, body });
+            if (onOpen) banner.addAction('Open Console', onOpen);
+            source.addNotification(banner);
+        } catch (_) {
+            Main.notify(title, body);
+        }
+    }
+
     // Displays a desktop notification when quota crosses the configured alert threshold
     _checkNotification(state) {
-        if (!this._enableNotifications || !state.data || state.data.isMock) return;
+        if (!this._enableNotifications || !state.data || state.data.isMock || state.data.fromDisk) return;
         const data = state.data;
         const threshold = this._notifyThreshold || 80;
 
@@ -328,10 +390,10 @@ class OpenCodeGoIndicator extends PanelMenu.Button {
             if (wPct >= threshold) alerts.push(`Weekly: ${wPct}%`);
             if (mPct >= threshold) alerts.push(`Monthly: ${mPct}%`);
             const detail = alerts.join(', ');
-            Main.notify('OpenCode Go Quota Alert', `High usage detected (${detail}).`);
+            this._notifyAlert('OpenCode Go Quota Alert', `High usage detected (${detail}). Open the console to top up your limit.`);
         } else if (maxPct >= 95 && (this._lastAlertedPercent || 0) < 95) {
             this._lastAlertedPercent = 95;
-            Main.notify('OpenCode Go Quota Critical', `Usage capacity has reached ${maxPct}%. Check OpenCode Go console.`);
+            this._notifyAlert('OpenCode Go Quota Critical', `Usage capacity has reached ${maxPct}%. Check OpenCode Go console.`);
         } else if (maxPct < threshold) {
             this._lastAlertedPercent = 0;
         }
@@ -386,6 +448,9 @@ export default class OpenCodeGoExtension extends Extension {
             this._indicator._authCookie = Settings.getAuthCookie(this._settings);
             this._indicator._refreshSeconds = Settings.getRefreshSeconds(this._settings);
             this._indicator._showBadge = Settings.getShowPanelBadge(this._settings);
+            this._indicator._warnPercent = Settings.getWarnPercent(this._settings);
+            this._indicator._criticalPercent = Settings.getCriticalPercent(this._settings);
+            this._indicator._enableHistory = Settings.getHistoryEnabled(this._settings);
             this._indicator._trayMode = Settings.getTrayDisplayMode(this._settings);
             this._indicator._enableNotifications = Settings.getEnableNotifications(this._settings);
             this._indicator._notifyThreshold = Settings.getNotificationThreshold(this._settings);
@@ -394,10 +459,15 @@ export default class OpenCodeGoExtension extends Extension {
             this._indicator._shortcutAccel = (Settings.getToggleShortcut(this._settings) || [])[0] || '';
         };
         this._applySettings();
+
+        // Boot the popup with last-session figures before the first network poll completes
+        this._indicator.loadHistory();
         this._unsub = Settings.connectChanged(this._settings, Settings.WATCHED_KEYS, () => {
             this._applySettings();
             // Drop any in-flight request so new credentials take effect on the next poll
             this._indicator.cancelRequest();
+            // A new workspace means new samples: rebind the history store before the refresh
+            this._indicator.reloadHistory();
             // The badge can be toggled without re-fetching, so repaint straight away
             this._indicator._updateBadge();
             this._indicator._setState(this._indicator._state);

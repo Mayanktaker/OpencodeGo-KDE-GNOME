@@ -17,10 +17,13 @@ function _orient(isVertical) {
         : { vertical: isVertical };
 }
 
-// Quota warning thresholds matching the KDE plasmoid and panel indicator
+// Quota warning thresholds used when the caller passes no UI configuration
 const WARN_THRESHOLD_PERCENT = 75;
 const CRITICAL_THRESHOLD_PERCENT = 90;
 const DEFAULT_ALERT_THRESHOLD = 80;
+
+// Aggregated UI thresholds: the panel config object feeds bar colors, tick and trend guides
+const DEFAULT_UI_CONFIG = { notify: DEFAULT_ALERT_THRESHOLD, warn: WARN_THRESHOLD_PERCENT, critical: CRITICAL_THRESHOLD_PERCENT };
 
 // Color tokens for usage levels and window accents
 const COLOR_CRITICAL = '#ff5555';
@@ -33,6 +36,10 @@ const COLOR_ACCENT_TEAL = '#2dd4bf';
 const BAR_CANVAS_HEIGHT = 11;
 const BAR_PILL_HEIGHT = 7;
 const BAR_PILL_RADIUS = 3.5;
+
+// Trend sparkline geometry: canvas height and edge padding for the 0..100 mapping
+const TREND_CANVAS_HEIGHT = 46;
+const TREND_EDGE_PAD = 3;
 
 // Animation duration (ms) and frame step for smooth progress bar fill
 const BAR_ANIM_DURATION_MS = 250;
@@ -77,10 +84,11 @@ function hexToRgb(hex) {
     return [((num >> 16) & 255) / 255, ((num >> 8) & 255) / 255, (num & 255) / 255];
 }
 
-// Determines the display color for a quota percentage
-function getColorForPercent(percent, defaultColor) {
-    if (percent >= CRITICAL_THRESHOLD_PERCENT) return COLOR_CRITICAL;
-    if (percent >= WARN_THRESHOLD_PERCENT) return COLOR_WARN;
+// Determines the display color for a quota percentage against the caller's thresholds
+function getColorForPercent(percent, defaultColor, uiConfig) {
+    const cfg = uiConfig || DEFAULT_UI_CONFIG;
+    if (percent >= cfg.critical) return COLOR_CRITICAL;
+    if (percent >= cfg.warn) return COLOR_WARN;
     return defaultColor;
 }
 
@@ -126,7 +134,7 @@ export function clearMenuContent(menu) {
 // Resolves the status badge text and style modifier for the header chip
 function statusChipFor(status) {
     if (status === 'demo') return { text: 'DEMO MODE', cls: 'opencodego-chip-demo' };
-    if (status === 'transient') return { text: 'STALE', cls: 'opencodego-chip-warn' };
+    if (status === 'transient' || status === 'resumed') return { text: 'STALE', cls: 'opencodego-chip-warn' };
     if (status === 'error') return { text: 'AUTH ERROR', cls: 'opencodego-chip-error' };
     return { text: 'LIVE', cls: 'opencodego-chip-live' };
 }
@@ -159,16 +167,24 @@ function createHeaderActionButton(iconName, onClick) {
     return btn;
 }
 
+// Formats the burn-rate chip: projected percent at reset, warning when 100% arrives sooner
+function paceChipText(pace) {
+    if (!pace) return null;
+    const projected = Math.max(0, Math.round(pace.projectedPct));
+    return projected >= 100 ? `⚠ hits ~${projected}%` : `↗ ~${projected}% by reset`;
+}
+
 // Builds one usage window card: dot + label + %, animated gradient bar + threshold tick, and meta row
-function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode = false, alertThreshold = DEFAULT_ALERT_THRESHOLD) {
+function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode = false, uiConfig = DEFAULT_UI_CONFIG, pace = null) {
     const itemBox = new St.BoxLayout({
         ..._orient(true),
         style_class: compactMode ? 'opencodego-usage-item opencodego-compact-row' : 'opencodego-usage-item',
         x_expand: true,
     });
 
-    const displayColor = getColorForPercent(percent, winDef.color);
+    const displayColor = getColorForPercent(percent, winDef.color, uiConfig);
     const shortReset = resetSeconds > 0 ? Api.formatResetCompact(resetSeconds) : '';
+    const paceText = paceChipText(pace);
 
     // Top row: colored window dot + title on left, percentage on right
     const titleRow = new St.BoxLayout({
@@ -227,7 +243,7 @@ function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode =
         height: BAR_CANVAS_HEIGHT,
     });
     const targetRatio = Math.max(0, Math.min(100, percent)) / 100;
-    const thresholdRatio = Math.max(0.5, Math.min(0.95, (alertThreshold || DEFAULT_ALERT_THRESHOLD) / 100));
+    const thresholdRatio = Math.max(0.5, Math.min(0.95, ((uiConfig && uiConfig.warn) || DEFAULT_UI_CONFIG.warn) / 100));
     bar._animProgress = 0;
 
     bar.connect('repaint', area => {
@@ -296,7 +312,7 @@ function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode =
     });
     _activeAnimTimers.push(timerId);
 
-    // Bottom meta row (standard mode): "$used / $limit ($left)" on left, "↻ 3h 33m" on right
+    // Bottom meta row (standard mode): "$used / $limit ($left)", pace chip, "↻ 3h 33m"
     if (!compactMode) {
         let leftMeta = '';
         if (barData && barData.usedFormatted && barData.limitFormatted) {
@@ -305,7 +321,7 @@ function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode =
                 leftMeta += ` (${barData.remainingFormatted})`;
             }
         }
-        if (leftMeta || shortReset) {
+        if (leftMeta || shortReset || paceText) {
             const metaRow = new St.BoxLayout({
                 ..._orient(false),
                 style_class: 'opencodego-meta-row',
@@ -319,6 +335,19 @@ function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode =
                 x_expand: true,
                 y_align: Clutter.ActorAlign.CENTER,
             }));
+
+            // Burn-rate chip sits before the reset countdown so the line stays balanced
+            if (paceText) {
+                const paceStyle = pace.projectedPct >= 100
+                    ? `color: ${COLOR_CRITICAL};`
+                    : (pace.projectedPct >= ((uiConfig && uiConfig.warn) || DEFAULT_UI_CONFIG.warn) ? `color: ${COLOR_WARN}; opacity: 0.9;` : 'opacity: 0.72;');
+                metaRow.add_child(new St.Label({
+                    text: paceText,
+                    style_class: 'opencodego-pace-label',
+                    y_align: Clutter.ActorAlign.CENTER,
+                    style: paceStyle,
+                }));
+            }
 
             if (shortReset) {
                 metaRow.add_child(new St.Label({
@@ -335,7 +364,100 @@ function addUsageRow(menu, winDef, percent, resetSeconds, barData, compactMode =
     menu.box.add_child(itemBox);
 }
 
-// Adds a contextual banner for Demo, Transient Outage, or Error states matching the mockup
+// Draws the 24h trend sparkline with faint warn/critical guide lines; static repaint, no timers
+function addTrendSection(menu, history, uiConfig) {
+    const cfg = uiConfig || DEFAULT_UI_CONFIG;
+    const view = history && history.view ? history.view : {};
+    const seriesKeys = ['weekly', 'hourly', 'monthly'].filter(key => Array.isArray(view[key]) && view[key].length >= 2);
+    if (!seriesKeys.length) return;
+
+    const box = new St.BoxLayout({
+        ..._orient(true),
+        style_class: 'opencodego-trend-box',
+        x_expand: true,
+    });
+    box.add_child(new St.Label({
+        text: 'Usage trend — last 24h',
+        style_class: 'opencodego-trend-title',
+        x_align: Clutter.ActorAlign.START,
+    }));
+
+    const canvas = new St.DrawingArea({
+        style_class: 'opencodego-trend-canvas',
+        x_expand: true,
+        height: TREND_CANVAS_HEIGHT,
+    });
+    canvas.connect('repaint', area => {
+        const [w, h] = area.get_surface_size();
+        const cr = area.get_context();
+        if (w <= 0 || h <= 0) {
+            cr.$dispose();
+            return;
+        }
+
+        // Shared time domain across all series keeps every line on the same x scale
+        let tMin = Infinity;
+        let tMax = -Infinity;
+        for (const key of seriesKeys) {
+            const pts = view[key];
+            tMin = Math.min(tMin, pts[0].t, pts[pts.length - 1].t);
+            tMax = Math.max(tMax, pts[0].t, pts[pts.length - 1].t);
+        }
+        const padX = TREND_EDGE_PAD;
+        const innerH = h - TREND_EDGE_PAD * 2;
+        const xOf = t => padX + ((t - tMin) / Math.max(1, tMax - tMin)) * (w - padX * 2);
+        const yOf = pct => (h - TREND_EDGE_PAD) - (Math.max(0, Math.min(100, pct)) / 100) * innerH;
+
+        const themeNode = area.get_theme_node();
+        const fg = themeNode.get_foreground_color();
+
+        // Faint horizontal guides at the warning and critical levels
+        cr.setLineWidth(1);
+        try { cr.setDash([2, 4], 0); } catch (_) {}
+        for (const [pct, alpha] of [[cfg.warn, TICK_ALPHA + 0.1], [cfg.critical, TICK_ALPHA + 0.12]]) {
+            cr.setSourceRGBA(fg.red / 255, fg.green / 255, fg.blue / 255, alpha);
+            cr.moveTo(padX, yOf(pct));
+            cr.lineTo(w - padX, yOf(pct));
+            cr.stroke();
+        }
+        try { cr.setDash([], 0); } catch (_) {}
+
+        for (const key of seriesKeys) {
+            const pts = view[key];
+            const winDef = WINDOWS.find(win => win.slot === key) || { color: COLOR_ACCENT_PRIMARY };
+            const [r, g, b] = hexToRgb(winDef.color);
+            // Headline weekly line gets double weight, the others trace thin
+            const accent = key === 'weekly';
+            cr.setLineWidth(accent ? 2 : 1.2);
+            cr.setSourceRGBA(r, g, b, accent ? 0.95 : 0.65);
+            cr.moveTo(xOf(pts[0].t), yOf(pts[0].pct));
+            for (let i = 1; i < pts.length; i++) cr.lineTo(xOf(pts[i].t), yOf(pts[i].pct));
+            cr.stroke();
+        }
+
+        cr.$dispose();
+    });
+    box.add_child(canvas);
+
+    // Legend mirrors the panel badge phrasing so the chart is readable at a glance
+    const legendParts = [];
+    for (const win of WINDOWS) {
+        const pts = view[win.slot];
+        if (pts && pts.length) legendParts.push(`${win.label.replace(' (5h)', '')} ${Math.round(pts[pts.length - 1].pct)}%`);
+    }
+    if (legendParts.length) {
+        box.add_child(new St.Label({
+            text: legendParts.join(' · '),
+            style_class: 'opencodego-trend-legend',
+            y_align: Clutter.ActorAlign.CENTER,
+            x_align: Clutter.ActorAlign.START,
+        }));
+    }
+
+    menu.box.add_child(box);
+}
+
+// Adds a contextual banner for Demo, Transient Outage, Resumed Snapshot, or Error states matching the mockup
 function addStateBanner(menu, state, actions) {
     if (state.status === 'demo') {
         const demoBanner = new St.BoxLayout({
@@ -367,15 +489,18 @@ function addStateBanner(menu, state, actions) {
             demoBanner.add_child(ctaBtn);
         }
         menu.box.add_child(demoBanner);
-    } else if (state.status === 'transient') {
+    } else if (state.status === 'transient' || state.status === 'resumed') {
         const warnBanner = new St.BoxLayout({
             ..._orient(false),
             style_class: 'opencodego-footer-box opencodego-status-transient',
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
+        const bannerText = state.status === 'resumed'
+            ? 'Figures restored from the last session — refreshing…'
+            : 'Console API temporarily unavailable — showing last known figures';
         const warnLabel = new St.Label({
-            text: 'Console API temporarily unavailable — showing last known figures',
+            text: bannerText,
             style_class: 'opencodego-footer-label',
             x_expand: true,
         });
@@ -511,7 +636,7 @@ export function buildMenuContent(
     state,
     actions,
     compactMode = false,
-    alertThreshold = DEFAULT_ALERT_THRESHOLD,
+    uiConfig = DEFAULT_UI_CONFIG,
     shortcutAccel = '<Super><Alt>o'
 ) {
     clearMenuContent(menu);
@@ -620,15 +745,17 @@ export function buildMenuContent(
     // Optional state banner (Demo onboarding CTA, Transient warning, or Error alert card)
     addStateBanner(menu, state, actions);
 
-    // Three quota window sub-cards + bottom shortcut/copy footer bar
+    // Three quota window sub-cards + trend sparkline + bottom shortcut/copy footer bar
     const data = state.data;
     if (data && state.status !== 'error') {
+        const pace = state.pace || {};
         for (const w of WINDOWS) {
             const bars = data[w.slot] || [];
             const barData = bars.length ? bars[0] : null;
             const pct = barData ? Api.calculatePercentage(barData.value, barData.maxValue) : 0;
-            addUsageRow(menu, w, pct, (data.resetSeconds || {})[w.resetKey] || 0, barData, compactMode, alertThreshold);
+            addUsageRow(menu, w, pct, (data.resetSeconds || {})[w.resetKey] || 0, barData, compactMode, uiConfig, pace[w.slot]);
         }
+        if (!compactMode) addTrendSection(menu, state.history, uiConfig);
         addFooterBar(menu, state, shortcutAccel);
     }
 

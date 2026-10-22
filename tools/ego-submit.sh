@@ -26,6 +26,7 @@ REQUIRED=(
     "popup.js"
     "settings.js"
     "api.js"
+    "history.js"
     "version.js"
     "stylesheet.css"
     "icons/opencodego-symbolic.svg"

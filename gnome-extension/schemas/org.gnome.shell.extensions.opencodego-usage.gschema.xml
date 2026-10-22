@@ -26,6 +26,24 @@
       <summary>Show the percentage badge in the panel</summary>
       <description>Display the headline percentage next to the panel icon</description>
     </key>
+    <!-- Percentage where bars and the panel badge turn amber -->
+    <key type="u" name="warn-percent">
+      <default>75</default>
+      <summary>Warning level</summary>
+      <description>Percentage at which bars, the threshold tick and the panel badge turn amber</description>
+    </key>
+    <!-- Percentage where bars and the panel badge turn red -->
+    <key type="u" name="critical-percent">
+      <default>90</default>
+      <summary>Critical level</summary>
+      <description>Percentage at which bars and the panel badge turn red; keep above the warning level</description>
+    </key>
+    <!-- Local history samples feeding the sparkline, pace chips and the resume snapshot -->
+    <key type="b" name="enable-history">
+      <default>true</default>
+      <summary>Keep usage trend history</summary>
+      <description>Stores the last 7 days of usage percentages on this device to draw the trend sparkline and pace estimate</description>
+    </key>
     <!-- Tray display mode: weekly, fiveHour, monthly, all, none -->
     <key type="s" name="tray-display-mode">
       <default>'weekly'</default>
